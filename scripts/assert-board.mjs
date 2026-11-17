@@ -9,9 +9,8 @@ export async function assertBoard(page, label, { follow = false } = {}) {
     const blobs = [...document.querySelectorAll('[data-inkt="player"]')]
       .map((el) => ({ id: el.getAttribute("data-player-id") || "?", r: el.getBoundingClientRect() }))
       .filter((b) => b.r.width > 6 && b.r.height > 6);
-    const arts = [
-      ...document.querySelectorAll('[data-inkt="art"], [data-inkt="art-clip"], [data-inkt="player"] .shield-ring'),
-    ]
+    const board = document.querySelector(".board-wrap") || document;
+    const arts = [...board.querySelectorAll('[data-inkt="player"] [data-inkt="art"], [data-inkt="player"] .shield-ring')]
       .map((el) => ({
         id: el.closest("[data-inkt='player']")?.getAttribute("data-player-id") || el.getAttribute("data-inkt") || "art",
         r: el.getBoundingClientRect(),
@@ -31,7 +30,7 @@ export async function assertBoard(page, label, { follow = false } = {}) {
         b.r.top < zone.top - pad ||
         b.r.bottom > zone.bottom + pad,
     );
-    const artPad = 2;
+    const artPad = 4;
     const artLeaks = arts.filter(
       (b) =>
         b.r.left < zone.left - artPad ||

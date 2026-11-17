@@ -144,6 +144,22 @@ describe("TagEngine loop", () => {
     }
   });
 
+  it("publishes only the current IT even if extra isIt flags are set", () => {
+    const engine = new TagEngine({ roundLength: 20, rand: rng(2) });
+    engine.addPlayer({ id: "a", name: "Ada", avatar: "bolt" });
+    engine.addPlayer({ id: "b", name: "Bea", avatar: "orb" });
+    engine.addPlayer({ id: "c", name: "Cyd", avatar: "fox" });
+    engine.start();
+    for (const p of Object.values(engine.state.players)) p.isIt = true;
+    engine.state.itId = "b";
+    const pub = engine.toPublic();
+    assert.deepEqual(
+      pub.players.filter((p) => p.isIt).map((p) => p.id),
+      ["b"],
+    );
+    assert.equal(pub.itId, "b");
+  });
+
   it("transfers IT on overlap and honors shield", () => {
     const engine = new TagEngine({ roundLength: 8, rand: rng(3) });
     const a = engine.addPlayer({ id: "a", name: "Chaser", avatar: "bolt" });

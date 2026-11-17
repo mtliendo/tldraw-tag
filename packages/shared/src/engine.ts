@@ -397,7 +397,8 @@ export class TagEngine {
         w: min.w,
         h: min.h,
       };
-      s.nextZone = { ...s.zone };
+      s.fromZone = { ...s.zone };
+      s.targetZone = { ...s.zone };
       s.shrinkEndsAt = 0;
     }
     const z = s.zone;
@@ -419,9 +420,9 @@ export class TagEngine {
       this.inputs.set(p.id, { x: 0, y: 0, usePower: false });
       if (kind === "frozen") p.frozenUntil = s.now + 30;
       else if (kind === "shield") p.hasShield = true;
-      else if (kind === "it") {
+      else if (kind === "it" && !itId) {
         p.isIt = true;
-        if (!itId) itId = p.id;
+        itId = p.id;
       }
       if (side === "n") {
         p.x = z.x + z.w * along;
@@ -500,7 +501,7 @@ export class TagEngine {
         y: p.y,
         vx: p.vx,
         vy: p.vy,
-        isIt: p.isIt,
+        isIt: p.id === s.itId,
         isBot: p.isBot,
         score: p.score,
         powerId: p.powerId,
@@ -1141,7 +1142,7 @@ export class TagEngine {
           name: p.name,
           avatar: p.avatar,
           score: p.score,
-          isIt: p.isIt,
+          isIt: p.id === this.state.itId,
           isBot: p.isBot,
         }),
       );

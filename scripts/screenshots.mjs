@@ -197,14 +197,16 @@ await assertLandscapeChrome(joinPhone, "10b-android-mid");
 await setPhoneViewport(joinPhone, IPHONE_PORTRAIT);
 
 await admin.waitForTimeout(7000);
-await admin.getByRole("button", { name: /pin art/i }).click();
-await admin.waitForTimeout(700);
-await shot(screen, "12c-projector-pin.png");
-await assertBoard(screen, "12c-projector-pin");
 await shot(admin, "05-shrinking-zone.png");
 await shot(screen, "05b-projector-zone.png");
 await assertBoard(screen, "05b-projector-zone");
 {
+  const itSprites = await screen.evaluate(() =>
+    [...document.querySelectorAll('[data-inkt="player"] img')]
+      .map((img) => img.getAttribute("src") || "")
+      .filter((src) => /-it\.svg/.test(src)).length,
+  );
+  if (itSprites !== 1) throw new Error(`05b expected one IT sprite, got ${itSprites}`);
   const iceLeak = await screen.evaluate(() => {
     const zone = document.querySelector('[data-inkt="zone"]')?.getBoundingClientRect();
     if (!zone) return -1;
@@ -215,6 +217,10 @@ await assertBoard(screen, "05b-projector-zone");
   });
   if (iceLeak > 0) throw new Error(`05b frozen overlay left the zone (${iceLeak})`);
 }
+await admin.getByRole("button", { name: /pin art/i }).click();
+await admin.waitForTimeout(700);
+await shot(screen, "12c-projector-pin.png");
+await assertBoard(screen, "12c-projector-pin");
 
 await admin.waitForSelector("text=wins!", { timeout: 30000 });
 await admin.waitForTimeout(2400);

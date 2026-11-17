@@ -31,6 +31,7 @@ describe("phone landscape", () => {
     assert.ok(pad.right > pad.left);
     assert.ok(LANDSCAPE_BLOB_PX >= 32);
     const port = portraitFollowPad(390, 844);
-    assert.ok(port.bottom > 0 && port.right > 0);
+    assert.ok(port.bottom >= 100 && port.right >= 100);
+    assert.ok(pad.right >= 100);
   });
 });

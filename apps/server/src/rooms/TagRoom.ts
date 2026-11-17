@@ -178,6 +178,9 @@ export class TagRoom extends Room<{ state: GameState }> {
       case "pinTintedIt":
         this.engine.pinTintedIt();
         break;
+      case "pinCorner":
+        this.engine.pinCorner();
+        break;
       default:
         throw new Error(`Unknown admin action: ${action}`);
     }

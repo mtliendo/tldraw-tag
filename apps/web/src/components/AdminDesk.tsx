@@ -183,6 +183,13 @@ export function AdminDesk({
               >
                 Pin tinted IT
               </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => admin("pinCorner")}
+                disabled={view.phase !== "playing"}
+              >
+                Pin corner
+              </button>
               {code && (
                 <a className="btn btn-ghost" href={screenUrl(code)} target="_blank" rel="noreferrer">
                   Projector

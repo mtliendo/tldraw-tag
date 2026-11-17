@@ -86,6 +86,11 @@ export function followBounds(zone: Box, viewportW: number, viewportH: number, zo
   return { x: zone.x, y: zone.y, w: zone.w, h: zone.h };
 }
 
+function clampAxis(value: number, min: number, max: number) {
+  if (max >= min) return Math.min(Math.max(value, min), max);
+  return (min + max) / 2;
+}
+
 /** Keep the follow camera on the playfield. Center when the board is smaller than the view. */
 export function followCamera(opts: {
   viewportW: number;
@@ -98,6 +103,10 @@ export function followCamera(opts: {
   const viewW = opts.viewportW / opts.zoom;
   const viewH = opts.viewportH / opts.zoom;
   const pad = opts.pad ?? { left: 0, right: 0, top: 0, bottom: 0 };
+  const padL = pad.left / opts.zoom;
+  const padR = pad.right / opts.zoom;
+  const padT = pad.top / opts.zoom;
+  const padB = pad.bottom / opts.zoom;
   const innerW = Math.max(1, opts.viewportW - pad.left - pad.right);
   const innerH = Math.max(1, opts.viewportH - pad.top - pad.bottom);
   const focusX = pad.left + innerW / 2;
@@ -106,13 +115,20 @@ export function followCamera(opts: {
   const originY = opts.player?.y ?? opts.bounds.y + opts.bounds.h / 2;
   let left = originX - focusX / opts.zoom;
   let top = originY - focusY / opts.zoom;
-  const maxLeft = opts.bounds.x + Math.max(0, opts.bounds.w - viewW);
-  const maxTop = opts.bounds.y + Math.max(0, opts.bounds.h - viewH);
-  left = Math.min(Math.max(left, opts.bounds.x), maxLeft);
-  top = Math.min(Math.max(top, opts.bounds.y), maxTop);
-  if (viewW >= opts.bounds.w) left = opts.bounds.x + (opts.bounds.w - viewW) / 2;
-  if (viewH >= opts.bounds.h) top = opts.bounds.y + (opts.bounds.h - viewH) / 2;
-  return { left, top, zoom: opts.zoom, centered: viewW >= opts.bounds.w || viewH >= opts.bounds.h };
+  // Overlay HUD/power pads are extra pan room past the board edge so a wall
+  // player can sit in the clear inner rect instead of under the chrome.
+  const minLeft = opts.bounds.x - padL;
+  const maxLeft = opts.bounds.x + opts.bounds.w - viewW + padR;
+  const minTop = opts.bounds.y - padT;
+  const maxTop = opts.bounds.y + opts.bounds.h - viewH + padB;
+  left = clampAxis(left, minLeft, maxLeft);
+  top = clampAxis(top, minTop, maxTop);
+  return {
+    left,
+    top,
+    zoom: opts.zoom,
+    centered: maxLeft < minLeft || maxTop < minTop,
+  };
 }
 
 export function clampZoom(zoom: number, limits: ZoomLimits) {

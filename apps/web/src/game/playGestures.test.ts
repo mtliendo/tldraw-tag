@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ARENA_H, ARENA_W, LANDSCAPE_BLOB_PX, MOBILE_BLOB_PX, PLAYER_TOKEN } from "@inkt/shared";
+import { landscapeFollowPad, portraitFollowPad } from "./phoneLayout";
 import {
   HINT_MS,
   LANDSCAPE_MAX_VISIBLE_ARENA,
@@ -149,6 +150,46 @@ describe("play gestures", () => {
     assert.deepEqual(tight, zone);
     const wide = followBounds(zone, 390, 733, 0.5);
     assert.deepEqual(wide, { x: 0, y: 0, w: ARENA_W, h: ARENA_H });
+  });
+
+  it("lets a bottom-right wall player sit clear of the power button", () => {
+    const pad = portraitFollowPad(390, 844);
+    const zoom = 0.814;
+    const vp = { w: 390, h: 733 };
+    const bounds = { x: 0, y: 0, w: ARENA_W, h: ARENA_H };
+    const player = { x: ARENA_W - PLAYER_TOKEN / 2, y: ARENA_H - PLAYER_TOKEN / 2 };
+    const cam = followCamera({
+      viewportW: vp.w,
+      viewportH: vp.h,
+      zoom,
+      player,
+      bounds,
+      pad,
+    });
+    const screenX = (player.x - cam.left) * zoom;
+    const screenY = (player.y - cam.top) * zoom;
+    const blob = (PLAYER_TOKEN / 2) * zoom;
+    assert.ok(screenY + blob <= vp.h - pad.bottom + 1, `bottom ${screenY + blob} vs ${vp.h - pad.bottom}`);
+    assert.ok(screenX + blob <= vp.w - pad.right + 1, `right ${screenX + blob} vs ${vp.w - pad.right}`);
+    assert.ok(cam.top > 0, "must pan past the board edge");
+  });
+
+  it("lets a landscape corner player sit left of the power button", () => {
+    const pad = landscapeFollowPad(844, 390);
+    const zoom = 0.91;
+    const vp = { w: 844, h: 390 };
+    const player = { x: ARENA_W - PLAYER_TOKEN / 2, y: ARENA_H - PLAYER_TOKEN / 2 };
+    const cam = followCamera({
+      viewportW: vp.w,
+      viewportH: vp.h,
+      zoom,
+      player,
+      bounds: { x: 0, y: 0, w: ARENA_W, h: ARENA_H },
+      pad,
+    });
+    const screenX = (player.x - cam.left) * zoom;
+    const blob = (PLAYER_TOKEN / 2) * zoom;
+    assert.ok(screenX + blob <= vp.w - pad.right + 1, `right ${screenX + blob} vs ${vp.w - pad.right}`);
   });
 
   it("clamps follow to the arena and centers when the board is shorter than the view", () => {

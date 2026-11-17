@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import { assertBoard } from "./assert-board.mjs";
 
 const out = path.resolve("docs/screenshots");
 await mkdir(out, { recursive: true });
@@ -76,12 +77,15 @@ await admin.waitForTimeout(2400);
 await shot(admin, "04-ingame-powers.png");
 await shot(join, "04b-player.png");
 await shot(screen, "07-projector.png");
+await assertBoard(screen, "07-projector");
 await joinPhone.waitForTimeout(400);
 await shot(joinPhone, "04c-player-mobile.png");
+await assertBoard(joinPhone, "04c-player-mobile", { follow: true });
 
 await admin.waitForTimeout(7000);
 await shot(admin, "05-shrinking-zone.png");
 await shot(screen, "05b-projector-zone.png");
+await assertBoard(screen, "05b-projector-zone");
 
 await admin.waitForSelector("text=was IT", { timeout: 30000 });
 await admin.waitForTimeout(2400);

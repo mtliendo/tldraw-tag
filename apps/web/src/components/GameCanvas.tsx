@@ -3,11 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Tldraw, createShapeId, type Editor, type TLShapeId } from "tldraw";
 import "tldraw/tldraw.css";
-import { ARENA_H, ARENA_W, PLAYER_TOKEN, POWER_TOKEN, ZONE_WARN_SECONDS } from "@inkt/shared";
+import {
+  ARENA_H,
+  ARENA_W,
+  MOBILE_BLOB_PX,
+  PLAYER_TOKEN,
+  POWER_TOKEN,
+  ZONE_WARN_SECONDS,
+} from "@inkt/shared";
 import { INKT_SHAPES } from "@/shapes/inkt-shapes";
 import { layoutPlayers } from "@/game/layoutPlayers";
 import type { ViewState } from "@/game/types";
 import { Confetti } from "@/components/Confetti";
+import { Minimap } from "@/components/Minimap";
 
 const license = process.env.NEXT_PUBLIC_TLDRAW_LICENSE_KEY;
 const TOKEN_R = PLAYER_TOKEN / 2;
@@ -17,12 +25,14 @@ export function GameCanvas({
   view,
   selfId,
   followZone = true,
+  followPlayer = false,
   interactive = false,
   labelScale = 1,
 }: {
   view: ViewState;
   selfId?: string | null;
   followZone?: boolean;
+  followPlayer?: boolean;
   interactive?: boolean;
   labelScale?: number;
 }) {
@@ -33,23 +43,62 @@ export function GameCanvas({
   const squashUntil = useRef(new Map<string, number>());
   const followZoneRef = useRef(followZone);
   followZoneRef.current = followZone;
+  const followPlayerRef = useRef(followPlayer);
+  followPlayerRef.current = followPlayer;
   const labelScaleRef = useRef(labelScale);
   labelScaleRef.current = labelScale;
   const viewRef = useRef(view);
   viewRef.current = view;
+  const selfIdRef = useRef(selfId);
+  selfIdRef.current = selfId;
   const [hoverId, setHoverId] = useState<string | null>(null);
 
-  const fit = useCallback((editor: Editor, zone = viewRef.current.zone) => {
+  const fit = useCallback((editor: Editor, state = viewRef.current) => {
     const el = wrapRef.current;
     if (el) editor.updateViewportScreenBounds(el);
-    editor.setCameraOptions({ isLocked: false, zoomSteps: [0.05, 8] });
-    const pad = followZoneRef.current ? 6 : 6;
-    editor.zoomToBounds(
-      { x: zone.x - pad, y: zone.y - pad, w: zone.w + pad * 2, h: zone.h + pad * 2 },
-      { inset: 0, immediate: true, force: true, animation: { duration: 0 } },
-    );
-    editor.setCameraOptions({ isLocked: true, zoomSteps: [0.05, 8] });
-    editor.setCamera(editor.getCamera(), { immediate: true, force: true });
+    const screen = el?.getBoundingClientRect();
+    const vp = {
+      w: Math.max(1, screen?.width ?? editor.getViewportScreenBounds().width),
+      h: Math.max(1, screen?.height ?? editor.getViewportScreenBounds().height),
+    };
+    editor.setCameraOptions({
+      isLocked: false,
+      panSpeed: 1,
+      zoomSpeed: 1,
+      zoomSteps: [0.05, 8],
+      wheelBehavior: "none",
+      constraints: undefined,
+    });
+    const zone = state.zone;
+    if (followPlayerRef.current) {
+      const self =
+        state.players.find((p) => p.id === selfIdRef.current) ?? state.players[0];
+      const blobZoom = MOBILE_BLOB_PX / PLAYER_TOKEN;
+      const coverZoom = Math.max(vp.w / Math.max(1, zone.w), vp.h / Math.max(1, zone.h));
+      const zoom = Math.max(blobZoom, coverZoom);
+      const viewW = vp.w / zoom;
+      const viewH = vp.h / zoom;
+      let left = (self?.x ?? zone.x + zone.w / 2) - viewW / 2;
+      let top = (self?.y ?? zone.y + zone.h / 2) - viewH / 2;
+      left = Math.min(Math.max(left, zone.x), zone.x + Math.max(0, zone.w - viewW));
+      top = Math.min(Math.max(top, zone.y), zone.y + Math.max(0, zone.h - viewH));
+      if (viewW >= zone.w) left = zone.x + (zone.w - viewW) / 2;
+      if (viewH >= zone.h) top = zone.y + (zone.h - viewH) / 2;
+      editor.setCamera({ x: -left, y: -top, z: zoom }, { immediate: true, force: true });
+    } else {
+      editor.zoomToBounds(
+        { x: zone.x, y: zone.y, w: zone.w, h: zone.h },
+        { inset: 8, immediate: true, force: true, animation: { duration: 0 } },
+      );
+    }
+    editor.setCameraOptions({
+      isLocked: true,
+      panSpeed: 1,
+      zoomSpeed: 1,
+      zoomSteps: [0.05, 8],
+      wheelBehavior: "none",
+      constraints: undefined,
+    });
   }, []);
 
   const sync = useCallback(
@@ -139,9 +188,9 @@ export function GameCanvas({
         decoyIds.push(
           make(`decoy:${decoy.id}`, {
             type: "inkt-decoy",
-            x: decoy.x - 40,
-            y: decoy.y - 40,
-            props: { w: 80, h: 80, name: decoy.name, avatar: decoy.avatar },
+            x: decoy.x - TOKEN_R,
+            y: decoy.y - TOKEN_R,
+            props: { w: 72, h: 72, name: decoy.name, avatar: decoy.avatar },
           }),
         );
       }
@@ -156,16 +205,14 @@ export function GameCanvas({
         const showLabel =
           p.showLabel &&
           (p.isIt || p.id === selfId || p.frozen || !crowded || p.id === hoverId);
-        const labelH = showLabel ? 24 * scale : 0;
-        const boxH = TOKEN_R * 2 + 8 + labelH;
         playerIds.push(
           make(`player:${p.id}`, {
             type: "inkt-player",
-            x: p.x - 70,
-            y: p.labelAbove ? p.y - TOKEN_R - labelH : p.y - TOKEN_R,
+            x: p.x - TOKEN_R,
+            y: p.y - TOKEN_R,
             props: {
-              w: 140,
-              h: boxH,
+              w: 72,
+              h: 72,
               name: p.name,
               avatar: p.avatar,
               isIt: p.isIt,
@@ -196,8 +243,9 @@ export function GameCanvas({
       if (puts.length) editor.updateShapes(puts);
       if (decoyIds.length) editor.bringToFront(decoyIds);
       if (playerIds.length) editor.bringToFront(playerIds);
+      if (followPlayerRef.current) fit(editor, state);
     },
-    [selfId, hoverId],
+    [selfId, hoverId, fit],
   );
 
   useEffect(() => {
@@ -210,8 +258,9 @@ export function GameCanvas({
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
-    fit(editor, view.zone);
-  }, [zoneSig, fit, view.zone]);
+    const frame = requestAnimationFrame(() => fit(editor, view));
+    return () => cancelAnimationFrame(frame);
+  }, [zoneSig, fit, view, followPlayer]);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -244,6 +293,7 @@ export function GameCanvas({
         hideUi
         shapeUtils={INKT_SHAPES}
         options={{ zoomToFitPadding: 0 }}
+        cameraOptions={{ isLocked: false, zoomSteps: [0.05, 8], wheelBehavior: "none" }}
         onMount={(editor) => {
           editorRef.current = editor;
           editor.updateInstanceState({ isGridMode: false });
@@ -258,6 +308,7 @@ export function GameCanvas({
           });
         }}
       />
+      {followPlayer && <Minimap view={view} selfId={selfId} />}
       {view.phase === "ended" && <Confetti />}
     </div>
   );

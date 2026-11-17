@@ -254,16 +254,16 @@ h2,
 @keyframes blob-idle {
   0%,
   100% {
-    transform: translateY(0) scale(1, 1);
+    transform: scale(1, 1);
   }
   50% {
-    transform: translateY(-3px) scale(1.03, 0.97);
+    transform: scale(1.02, 0.98);
   }
 }
 
 .blob-idle {
   animation: blob-idle 1.4s ease-in-out infinite;
-  transform-origin: 50% 80%;
+  transform-origin: 50% 50%;
 }
 
 @keyframes blob-squash {

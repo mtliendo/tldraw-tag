@@ -49,10 +49,10 @@ export function layoutPlayers(
   });
 
   const blobRect = (p: LaidOutPlayer): Rect => ({
-    x: p.x - r - 4,
-    y: p.y - r - 4,
-    w: r * 2 + 8,
-    h: r * 2 + 8,
+    x: p.x - r,
+    y: p.y - r,
+    w: r * 2,
+    h: r * 2,
   });
 
   const rank = (p: LaidOutPlayer) => {
@@ -62,14 +62,13 @@ export function layoutPlayers(
     return 3;
   };
 
-  const hitsTaken = (p: LaidOutPlayer, taken: LaidOutPlayer[]) =>
-    taken.some(
-      (q) => overlap(labelRect(p), labelRect(q)) || overlap(labelRect(p), blobRect(q)),
-    );
+  const blocked = (p: LaidOutPlayer, taken: LaidOutPlayer[]) =>
+    laid.some((q) => q.id !== p.id && overlap(labelRect(p), blobRect(q))) ||
+    taken.some((q) => overlap(labelRect(p), labelRect(q)));
 
   const ranked = [...laid].sort((a, b) => rank(a) - rank(b) || a.y - b.y || a.x - b.x);
   const taken: LaidOutPlayer[] = [];
-  const nudges = [0, 28 * labelScale, -28 * labelScale, 48 * labelScale, -48 * labelScale];
+  const nudges = [0, 30 * labelScale, -30 * labelScale, 52 * labelScale, -52 * labelScale];
 
   for (const p of ranked) {
     const preferAbove = p.labelAbove;
@@ -80,7 +79,7 @@ export function layoutPlayers(
       p.labelAbove = above;
       for (const nx of nudges) {
         p.labelX = nx;
-        if (!hitsTaken(p, taken)) {
+        if (!blocked(p, taken)) {
           placed = true;
           break;
         }

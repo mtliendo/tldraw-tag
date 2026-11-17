@@ -17,7 +17,11 @@ export default function PlayPage() {
   const router = useRouter();
   const code = String(params.code || "").toUpperCase();
   const [identity, setIdentity] = useState<{ name: string; avatar: string } | null>(null);
-  const [mobile, setMobile] = useState(false);
+  const [mobile, setMobile] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      (window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 800),
+  );
 
   useEffect(() => {
     const raw = sessionStorage.getItem(`inkt:${code}`);
@@ -26,8 +30,13 @@ export default function PlayPage() {
       return;
     }
     setIdentity(JSON.parse(raw));
-    const mq = window.matchMedia("(pointer: coarse)");
-    setMobile(mq.matches || window.innerWidth < 800);
+    const apply = () => {
+      const mq = window.matchMedia("(pointer: coarse)");
+      setMobile(mq.matches || window.innerWidth < 800);
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
   }, [code, router]);
 
   const { view, connected, error, sessionId, announce, sendInput, usePower } = useGameRoom({
@@ -84,7 +93,7 @@ export default function PlayPage() {
         {error && (
           <div style={{ position: "absolute", top: 80, left: 16, zIndex: 8, color: "var(--it)" }}>{error}</div>
         )}
-        <GameCanvas view={view} selfId={me?.id} followZone />
+        <GameCanvas view={view} selfId={me?.id} followZone={!mobile} followPlayer={mobile} />
         {view.phase === "lobby" && (
           <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "end center", padding: 24, zIndex: 6 }}>
             <div className="panel" style={{ padding: 16, textAlign: "center" }}>

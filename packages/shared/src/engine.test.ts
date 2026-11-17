@@ -74,6 +74,27 @@ describe("TagEngine loop", () => {
     assert.equal(engine.state.phase, "ended");
   });
 
+  it("keeps non-ghost blobs off paver walls after clamp and shrink", () => {
+    const engine = new TagEngine({ roundLength: 20, shrinkInterval: 3, rand: rng(9) });
+    engine.addPlayer({ name: "Ada", avatar: "bolt" });
+    engine.spawnBots(10);
+    engine.start();
+    engine.showcase();
+    for (let i = 0; i < 80; i++) {
+      engine.tick(0.05);
+      for (const wall of Object.values(engine.state.walls)) {
+        for (const p of Object.values(engine.state.players)) {
+          if (p.ghostUntil > engine.state.now) continue;
+          assert.equal(
+            circleHitsAabb(p.x, p.y, PLAYER_RADIUS - 0.2, wall).hit,
+            false,
+            `${p.name} overlapped a wall at t=${engine.state.now.toFixed(2)}`,
+          );
+        }
+      }
+    }
+  });
+
   it("soft-separates stacked players so blobs do not sit on top of each other", () => {
     const engine = new TagEngine({ roundLength: 20, shrinkInterval: 20, rand: rng(4) });
     const names = ["Mia", "Sketch", "Doodle", "Pixel", "Scribble", "Nib"];

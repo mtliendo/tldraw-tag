@@ -190,7 +190,7 @@ export class ZoneShapeUtil extends ShapeUtil<ZoneShape> {
     const color = shape.props.shrinking || shape.props.warn > 0.05 ? "#e16919" : "#1d1d1d";
     return (
       <HTMLContainer>
-        <div style={{ width: shape.props.w, height: shape.props.h, pointerEvents: "none" }}>
+        <div data-inkt="zone" style={{ width: shape.props.w, height: shape.props.h, pointerEvents: "none" }}>
           <DrawRect w={shape.props.w} h={shape.props.h} color={color} seed={2} />
         </div>
       </HTMLContainer>
@@ -288,23 +288,22 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
     };
   }
   getGeometry(shape: PlayerShape) {
-    return new Circle2d({ radius: 36, isFilled: true });
+    return new Rectangle2d({ width: 72, height: 72, isFilled: true });
   }
   component(shape: PlayerShape) {
     const avatar = avatarById(shape.props.avatar);
     const held = POWER_UPS[shape.props.powerId as PowerId];
     const token = 72;
     const stroke = shape.props.isIt ? "#e03131" : "#1d1d1d";
-    const blobLeft = (shape.props.w - token) / 2;
-    const labelH = 24 * shape.props.labelScale;
-    const blobTop = shape.props.labelAbove ? labelH : 0;
+    const labelH = 22 * shape.props.labelScale;
     return (
       <HTMLContainer>
         <div
           data-player-id={shape.props.playerId}
+          data-inkt="player"
           style={{
-            width: shape.props.w,
-            height: shape.props.h,
+            width: token,
+            height: token,
             opacity: shape.props.ghost ? 0.42 : 1,
             position: "relative",
             overflow: "visible",
@@ -318,8 +317,8 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
               width: token,
               height: token,
               position: "absolute",
-              left: blobLeft,
-              top: blobTop,
+              left: 0,
+              top: 0,
             }}
           >
             {shape.props.frozen && (
@@ -359,10 +358,11 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
           {shape.props.showLabel && (
             <div
               className="player-label"
+              data-inkt="label"
               style={{
                 position: "absolute",
-                left: shape.props.w / 2 + shape.props.labelX,
-                top: shape.props.labelAbove ? 0 : blobTop + token + 4 * shape.props.labelScale,
+                left: token / 2 + shape.props.labelX,
+                top: shape.props.labelAbove ? -labelH - 4 : token + 4 * shape.props.labelScale,
                 fontWeight: 600,
                 color: shape.props.isIt ? "#e03131" : "#1d1d1d",
               }}
@@ -482,7 +482,7 @@ export class WallShapeUtil extends ShapeUtil<WallShape> {
     const { w, h } = shape.props;
     return (
       <HTMLContainer>
-        <svg width={w} height={h}>
+        <svg width={w} height={h} data-inkt="wall">
           <path d={wobbleRectPath(w, h, 3, 1.4)} fill="#e16919" stroke="#1d1d1d" strokeWidth={STROKE} />
         </svg>
       </HTMLContainer>

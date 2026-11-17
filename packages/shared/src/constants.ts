@@ -14,8 +14,9 @@ export const PLAYER_LABEL_H = 20;
 export const PLAYER_LABEL_W = 96;
 export const STROKE = 1.5;
 
-export const PLAYER_SEPARATION = PLAYER_RADIUS * 2 + 8;
-export const TAG_DISTANCE = PLAYER_RADIUS * 2 + 16;
+export const PLAYER_SEPARATION = PLAYER_RADIUS * 2;
+export const TAG_DISTANCE = PLAYER_RADIUS * 2 + 10;
+export const MOBILE_BLOB_PX = 44;
 export const TAG_COOLDOWN = 0.55;
 export const PICKUP_DISTANCE = 44;
 
@@ -27,7 +28,7 @@ export const ZONE_MIN_W = 320;
 export const ZONE_MIN_H = 180;
 export const ZONE_SHRINK_DURATION = 1.6;
 export const ZONE_WARN_SECONDS = 2.5;
-export const ZONE_INSET = PLAYER_RADIUS + 20;
+export const ZONE_INSET = PLAYER_RADIUS + 2;
 
 export const POWER_SPAWN_MIN = 2.2;
 export const POWER_SPAWN_MAX = 4.8;

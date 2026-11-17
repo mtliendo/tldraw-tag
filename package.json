@@ -16,7 +16,7 @@
     "start:server": "npm run start -w server",
     "start:web": "npm run start -w web",
     "test": "npm run test -w @inkt/shared && npm run test -w server",
-    "e2e": "node scripts/e2e-loop.mjs",
+    "e2e": "node scripts/e2e-loop.mjs && node scripts/e2e-visual.mjs",
     "screenshots": "node scripts/screenshots.mjs",
     "lint": "npm run lint -w web --if-present"
   },

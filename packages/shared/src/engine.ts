@@ -304,8 +304,8 @@ export class TagEngine {
         h: WALL_THICKNESS,
         expiresAt: s.now + 18,
       };
-      wall.x = clamp(wall.x, z.x, z.x + z.w - wall.w);
-      wall.y = clamp(wall.y, z.y, z.y + z.h - wall.h);
+      wall.x = clamp(wall.x, z.x + ZONE_INSET, z.x + z.w - ZONE_INSET - wall.w);
+      wall.y = clamp(wall.y, z.y + ZONE_INSET, z.y + z.h - ZONE_INSET - wall.h);
       if (!this.wallHitsAnyPlayer(wall)) {
         s.walls[wall.id] = wall;
         placedWall = true;
@@ -323,8 +323,8 @@ export class TagEngine {
           h: WALL_THICKNESS,
           expiresAt: s.now + 18,
         };
-        wall.x = clamp(wall.x, z.x, z.x + z.w - wall.w);
-        wall.y = clamp(wall.y, z.y, z.y + z.h - wall.h);
+        wall.x = clamp(wall.x, z.x + ZONE_INSET, z.x + z.w - ZONE_INSET - wall.w);
+        wall.y = clamp(wall.y, z.y + ZONE_INSET, z.y + z.h - ZONE_INSET - wall.h);
         if (this.wallHitsAnyPlayer(wall)) continue;
         s.walls[wall.id] = wall;
         break;
@@ -362,13 +362,13 @@ export class TagEngine {
     this.tickWalls();
     this.tickDecoys(dt);
     this.pruneLootOutsideZone();
+    this.keepWallsInZone();
     this.maybeSpawnPower();
     this.thinkBots();
     this.tickPlayers(dt);
     this.resolveTags();
     this.resolvePickups();
-    this.separatePlayers();
-    for (const p of Object.values(this.state.players)) this.clampPlayer(p);
+    this.constrainBodies();
     this.refreshLeaderboard();
     if (this.state.timeLeft <= 0) this.endRound();
   }
@@ -498,9 +498,7 @@ export class TagEngine {
       s.nextShrinkAt = s.now + s.shrinkInterval;
       this.push({ type: "shrink" });
     }
-    for (const p of Object.values(s.players)) this.clampPlayer(p);
-    this.separatePlayers();
-    for (const p of Object.values(s.players)) this.clampPlayer(p);
+    this.constrainBodies();
   }
 
   private tickPulses() {
@@ -587,15 +585,20 @@ export class TagEngine {
         p.facingY = iy / (mag || 1);
       }
       p.x += p.vx * dt;
-      if (p.ghostUntil <= s.now) this.collideWalls(p);
       p.y += p.vy * dt;
-      if (p.ghostUntil <= s.now) this.collideWalls(p);
       if (!p.isIt) p.score += dt;
     }
-    this.separatePlayers();
-    for (const p of Object.values(s.players)) this.clampPlayer(p);
-    this.separatePlayers();
-    for (const p of Object.values(s.players)) this.clampPlayer(p);
+    this.constrainBodies();
+  }
+
+  private constrainBodies() {
+    for (let i = 0; i < 10; i++) {
+      this.separatePlayers();
+      for (const p of Object.values(this.state.players)) {
+        if (p.ghostUntil <= this.state.now) this.collideWalls(p);
+        this.clampPlayer(p);
+      }
+    }
   }
 
   private separatePlayers() {
@@ -640,12 +643,32 @@ export class TagEngine {
   }
 
   private collideWalls(p: EnginePlayer) {
+    const z = this.state.zone;
+    const x0 = z.x + ZONE_INSET;
+    const x1 = z.x + z.w - ZONE_INSET;
+    const y0 = z.y + ZONE_INSET;
+    const y1 = z.y + z.h - ZONE_INSET;
     for (let pass = 0; pass < 3; pass++) {
       for (const wall of Object.values(this.state.walls)) {
         const next = separateCircleFromAabb(p.x, p.y, PLAYER_RADIUS, wall);
-        p.x = next.x;
-        p.y = next.y;
+        p.x = clamp(next.x, x0, x1);
+        p.y = clamp(next.y, y0, y1);
       }
+    }
+  }
+
+  private keepWallsInZone() {
+    const z = this.state.zone;
+    const pad = ZONE_INSET;
+    for (const [id, wall] of Object.entries(this.state.walls)) {
+      const maxX = z.x + z.w - pad - wall.w;
+      const maxY = z.y + z.h - pad - wall.h;
+      if (maxX < z.x + pad || maxY < z.y + pad) {
+        delete this.state.walls[id];
+        continue;
+      }
+      wall.x = clamp(wall.x, z.x + pad, maxX);
+      wall.y = clamp(wall.y, z.y + pad, maxY);
     }
   }
 
@@ -799,8 +822,8 @@ export class TagEngine {
         h,
         expiresAt: this.state.now + WALL_LIFETIME,
       };
-      wall.x = clamp(wall.x, z.x, z.x + z.w - wall.w);
-      wall.y = clamp(wall.y, z.y, z.y + z.h - wall.h);
+      wall.x = clamp(wall.x, z.x + ZONE_INSET, z.x + z.w - ZONE_INSET - wall.w);
+      wall.y = clamp(wall.y, z.y + ZONE_INSET, z.y + z.h - ZONE_INSET - wall.h);
       if (this.wallHitsAnyPlayer(wall)) continue;
       this.state.walls[wall.id] = wall;
       return true;
@@ -828,12 +851,26 @@ export class TagEngine {
     }
   }
 
+  private botHome(bot: EnginePlayer) {
+    const bots = Object.values(this.state.players).filter((p) => p.isBot);
+    const i = Math.max(0, bots.findIndex((p) => p.id === bot.id));
+    const n = Math.max(1, bots.length);
+    const z = this.state.zone;
+    const t = ((i + 0.37) / n) * Math.PI * 2;
+    const rx = Math.max(40, (z.w / 2 - ZONE_INSET) * 0.62);
+    const ry = Math.max(40, (z.h / 2 - ZONE_INSET) * 0.62);
+    return {
+      x: z.x + z.w / 2 + Math.cos(t) * rx,
+      y: z.y + z.h / 2 + Math.sin(t) * ry,
+    };
+  }
+
   private pickBotInput(bot: EnginePlayer, it: EnginePlayer | undefined): InputState {
     const s = this.state;
     let tx = bot.x;
     let ty = bot.y;
     let usePower = false;
-    const side = bot.id.charCodeAt(bot.id.length - 1) % 2 === 0 ? 1 : -1;
+    const home = this.botHome(bot);
 
     if (bot.isIt) {
       let nearest: EnginePlayer | null = null;
@@ -847,20 +884,24 @@ export class TagEngine {
         }
       }
       if (nearest) {
-        tx = nearest.x + nearest.vx * 0.28;
-        ty = nearest.y + nearest.vy * 0.28;
         const away = normalize(nearest.x - bot.x, nearest.y - bot.y);
-        tx += -away.y * side * 36;
-        ty += away.x * side * 36;
+        const standoff = Math.max(TAG_DISTANCE + 8, PLAYER_SEPARATION + 12);
+        if (nearestD < standoff) {
+          tx = bot.x - away.x * 40 + -away.y * 70;
+          ty = bot.y - away.y * 40 + away.x * 70;
+        } else {
+          tx = nearest.x - away.x * standoff;
+          ty = nearest.y - away.y * standoff;
+        }
       }
       if (bot.powerId === "speedster" && nearestD < 420) usePower = this.rand() < 0.45;
       if (bot.powerId === "ghost" && nearestD > 80) usePower = this.rand() < 0.2;
     } else if (it) {
       const dIt = dist(bot.x, bot.y, it.x, it.y);
-      if (dIt < 300) {
+      if (dIt < 280) {
         const away = normalize(bot.x - it.x, bot.y - it.y);
-        tx = bot.x + away.x * 240 - away.y * side * 90;
-        ty = bot.y + away.y * 240 + away.x * side * 90;
+        tx = home.x * 0.55 + (bot.x + away.x * 220) * 0.45;
+        ty = home.y * 0.55 + (bot.y + away.y * 220) * 0.45;
         if (bot.powerId === "ghost" && dIt < 140) usePower = true;
         if (bot.powerId === "speedster" && dIt < 200) usePower = this.rand() < 0.5;
         if (bot.powerId === "shield" && dIt < 90) usePower = true;
@@ -870,36 +911,43 @@ export class TagEngine {
         if (bot.powerId === "freezer" && dIt < FREEZE_RANGE) usePower = true;
       } else {
         const loot = this.nearestLoot(bot);
-        if (loot && loot.d < 520) {
+        const myLoot = loot && loot.d < 380 && this.nearestLootOwner(loot) === bot.id;
+        if (myLoot && loot) {
           tx = loot.x;
           ty = loot.y;
         } else {
-          if (dist(bot.x, bot.y, bot.wanderX, bot.wanderY) < 55 || this.rand() < 0.08) {
-            const spot = this.randomInZone(ZONE_INSET);
-            bot.wanderX = spot.x;
-            bot.wanderY = spot.y;
-          }
-          tx = bot.wanderX;
-          ty = bot.wanderY;
+          bot.wanderX = home.x;
+          bot.wanderY = home.y;
+          tx = home.x;
+          ty = home.y;
         }
       }
     } else {
-      if (dist(bot.x, bot.y, bot.wanderX, bot.wanderY) < 55) {
-        const spot = this.randomInZone(ZONE_INSET);
-        bot.wanderX = spot.x;
-        bot.wanderY = spot.y;
-      }
-      tx = bot.wanderX;
-      ty = bot.wanderY;
+      tx = home.x;
+      ty = home.y;
     }
 
     const dir = normalize(tx - bot.x, ty - bot.y);
-    const jitter = 0.12;
+    const jitter = 0.08;
     return {
       x: clamp(dir.x + (this.rand() - 0.5) * jitter, -1, 1),
       y: clamp(dir.y + (this.rand() - 0.5) * jitter, -1, 1),
       usePower,
     };
+  }
+
+  private nearestLootOwner(loot: { x: number; y: number }) {
+    let bestId = "";
+    let bestD = Infinity;
+    for (const p of Object.values(this.state.players)) {
+      if (p.isIt) continue;
+      const d = dist(p.x, p.y, loot.x, loot.y);
+      if (d < bestD) {
+        bestD = d;
+        bestId = p.id;
+      }
+    }
+    return bestId;
   }
 
   private nearestLoot(bot: EnginePlayer) {

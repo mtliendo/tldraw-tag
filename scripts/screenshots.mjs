@@ -95,6 +95,26 @@ await admin.waitForTimeout(2400);
 await shot(admin, "06-leaderboard.png");
 await screen.waitForSelector("text=Play again", { timeout: 8000 });
 await shot(screen, "06b-projector-end.png");
+{
+  const clip = await screen.evaluate(() => {
+    const zone = document.querySelector('[data-inkt="zone"]')?.getBoundingClientRect();
+    if (!zone) return -1;
+    const labels = [...document.querySelectorAll('[data-inkt="label"]')].map((el) =>
+      el.getBoundingClientRect(),
+    );
+    return labels.filter(
+      (r) => r.left < zone.left - 2 || r.right > zone.right + 2 || r.top < zone.top - 2 || r.bottom > zone.bottom + 2,
+    ).length;
+  });
+  if (clip > 0) throw new Error(`06b labels clipped by zone: ${clip}`);
+}
+await shot(joinPhone, "06c-player-mobile-end.png");
+
+await screen.getByRole("button", { name: /play again/i }).click();
+await admin.waitForFunction(() => !/was IT/i.test(document.body.innerText), { timeout: 10000 });
+await joinPhone.waitForTimeout(900);
+await shot(joinPhone, "04d-player-mobile-r2.png");
+await assertBoard(joinPhone, "04d-player-mobile-r2", { follow: true });
 
 await phone.close();
 await browser.close();

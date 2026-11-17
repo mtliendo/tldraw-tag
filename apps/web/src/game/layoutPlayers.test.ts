@@ -67,6 +67,16 @@ describe("layoutPlayers", () => {
     }
     const laid = layoutPlayers(players, z, crowdLabelScale(20, 1.5));
     assert.equal(laid.filter((p) => p.showLabel).length, 20);
+    for (const p of laid.filter((x) => x.showLabel)) {
+      const label = {
+        x: p.x + p.labelX - p.labelW / 2,
+        y: p.y + p.labelY - p.labelH / 2,
+        w: p.labelW,
+        h: p.labelH,
+      };
+      assert.ok(label.x >= z.x - 1, `${p.name} clipped left`);
+      assert.ok(label.x + label.w <= z.x + z.w + 1, `${p.name} clipped right`);
+    }
     const r = 36;
     const hits = (a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) =>
       a.x < b.x + b.w - 2 && a.x + a.w > b.x + 2 && a.y < b.y + b.h - 2 && a.y + a.h > b.y + 2;
@@ -82,6 +92,28 @@ describe("layoutPlayers", () => {
         const blob = { x: q.x - r, y: q.y - r, w: r * 2, h: r * 2 };
         assert.equal(hits(label, blob), false, `${p.name} overlapped ${q.name}`);
       }
+    }
+  });
+
+  it("keeps labels out of a center leaderboard hole", () => {
+    const z = { x: 0, y: 0, w: 800, h: 450 };
+    const hole = { x: 160, y: 80, w: 480, h: 280 };
+    const players: ViewPlayer[] = [];
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      players.push(player(i, 400 + Math.cos(a) * 300, 225 + Math.sin(a) * 170));
+    }
+    const laid = layoutPlayers(players, z, 1, null, { clamp: z, avoid: [hole] });
+    const hits = (a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) =>
+      a.x < b.x + b.w - 4 && a.x + a.w > b.x + 4 && a.y < b.y + b.h - 4 && a.y + a.h > b.y + 4;
+    for (const p of laid.filter((x) => x.showLabel)) {
+      const label = {
+        x: p.x + p.labelX - p.labelW / 2,
+        y: p.y + p.labelY - p.labelH / 2,
+        w: p.labelW,
+        h: p.labelH,
+      };
+      assert.equal(hits(label, hole), false, `${p.name} sat under the leaderboard`);
     }
   });
 });

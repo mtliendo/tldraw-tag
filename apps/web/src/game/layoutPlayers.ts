@@ -73,11 +73,55 @@ function pillRect(
   return { x: p.x + r + gap + ox, y: p.y - h / 2 + oy, w, h };
 }
 
+export type LayoutOptions = {
+  selfId?: string | null;
+  clamp?: Rect;
+  avoid?: Rect[];
+};
+
+function pushOut(rect: Rect, hole: Rect, pad = 6, box?: Rect): Rect {
+  if (overlapArea(rect, hole, 0) === 0) return rect;
+  const options = [
+    { ...rect, y: hole.y - pad - rect.h },
+    { ...rect, y: hole.y + hole.h + pad },
+    { ...rect, x: hole.x - pad - rect.w },
+    { ...rect, x: hole.x + hole.w + pad },
+  ];
+  let best = options[0];
+  let bestScore = Infinity;
+  const cx = rect.x + rect.w / 2;
+  const cy = rect.y + rect.h / 2;
+  for (const o of options) {
+    const r = box ? clampRect(o, box, 4) : o;
+    const dx = r.x + r.w / 2 - cx;
+    const dy = r.y + r.h / 2 - cy;
+    const score = overlapArea(r, hole, 0) * 4000 + dx * dx + dy * dy;
+    if (score < bestScore) {
+      bestScore = score;
+      best = r;
+    }
+  }
+  return best;
+}
+
+function clampRect(rect: Rect, box: Rect, pad = 2): Rect {
+  const maxX = box.x + box.w - pad - rect.w;
+  const maxY = box.y + box.h - pad - rect.h;
+  const minX = box.x + pad;
+  const minY = box.y + pad;
+  return {
+    ...rect,
+    x: maxX < minX ? box.x + (box.w - rect.w) / 2 : Math.min(Math.max(rect.x, minX), maxX),
+    y: maxY < minY ? box.y + (box.h - rect.h) / 2 : Math.min(Math.max(rect.y, minY), maxY),
+  };
+}
+
 export function layoutPlayers(
   players: ViewPlayer[],
   zone: Zone,
   labelScale = 1,
   selfId?: string | null,
+  options?: LayoutOptions,
 ): LaidOutPlayer[] {
   const r = PLAYER_TOKEN / 2;
   const lh = PLAYER_LABEL_H * labelScale + 2;
@@ -93,7 +137,7 @@ export function layoutPlayers(
     labelW: labelWidth(
       p.name,
       labelScale,
-      p.id === selfId ? "you" : p.isIt ? "it" : "plain",
+      p.id === (options?.selfId ?? selfId) ? "you" : p.isIt ? "it" : "plain",
     ),
     labelH: lh,
     showLabel: true,
@@ -106,9 +150,12 @@ export function layoutPlayers(
     h: r * 2,
   });
 
+  const youId = options?.selfId ?? selfId;
+  const clampTo = options?.clamp ?? zone;
+  const avoid = options?.avoid ?? [];
   const rank = (p: LaidOutPlayer) => {
     if (p.isIt) return 0;
-    if (p.id === selfId) return 1;
+    if (p.id === youId) return 1;
     if (p.frozen) return 2;
     return 3;
   };
@@ -124,7 +171,8 @@ export function layoutPlayers(
 
     for (const gap of gaps) {
       for (const slot of candidates(preferAbove)) {
-        const rect = pillRect(p, slot.side, slot.ox, slot.oy, r, lh, gap);
+        let rect = pillRect(p, slot.side, slot.ox, slot.oy, r, lh, gap);
+        rect = clampRect(rect, clampTo, 4);
         let score = 0;
         for (const q of laid) {
           score += overlapArea(rect, blobRect(q), CLEAR) * (q.id === p.id ? 8 : 5);
@@ -138,6 +186,9 @@ export function layoutPlayers(
           };
           score += overlapArea(rect, other, CLEAR) * 7;
         }
+        for (const hole of avoid) {
+          score += overlapArea(rect, hole, 8) * 18;
+        }
         if (!best || score < best.score) best = { slot, rect, score };
         if (score === 0) break;
       }
@@ -149,7 +200,10 @@ export function layoutPlayers(
       continue;
     }
 
-    const { slot, rect } = best;
+    const { slot } = best;
+    let rect = best.rect;
+    for (const hole of avoid) rect = pushOut(rect, hole, 8, clampTo);
+    rect = clampRect(rect, clampTo, 4);
     p.labelSide = slot.side;
     p.labelAbove = slot.side === "above";
     p.labelX = rect.x + rect.w / 2 - p.x;

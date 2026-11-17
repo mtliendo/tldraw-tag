@@ -191,9 +191,13 @@ Do not enable `DEV_BYPASS_AUTH` on Railway.
 
 ![Phone play — joystick + power](docs/screenshots/04c-player-mobile.png)
 
+![Phone round 2](docs/screenshots/04d-player-mobile-r2.png)
+
 ![Shrinking zone](docs/screenshots/05-shrinking-zone.png)
 
 ![Leaderboard](docs/screenshots/06-leaderboard.png)
+
+![Phone end](docs/screenshots/06c-player-mobile-end.png)
 
 ![Projector view](docs/screenshots/07-projector.png)
 

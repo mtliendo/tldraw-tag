@@ -21,12 +21,9 @@ export default function ScreenPage() {
     fetch("/api/admin/token")
       .then(async (res) => {
         if (!live) return;
-        if (!res.ok) {
-          setAdminToken(null);
-          return;
-        }
-        const body = await res.json();
-        setAdminToken(typeof body.token === "string" ? body.token : null);
+        const body = await res.json().catch(() => ({}));
+        const token = body.isAdmin && typeof body.token === "string" ? body.token : null;
+        setAdminToken(token);
       })
       .catch(() => {
         if (live) setAdminToken(null);
@@ -158,12 +155,12 @@ export default function ScreenPage() {
               </div>
             </div>
             {callout && (
-              <div className="chip" style={{ marginTop: 10, fontSize: 22, background: "#FCE19C" }}>
+              <div className="chip sticky-note" style={{ marginTop: 10, fontSize: 22 }}>
                 {callout}
               </div>
             )}
             {joinFlash && (
-              <div className="chip" style={{ marginTop: 10, fontSize: 20, background: "#FCE19C" }}>
+              <div className="chip sticky-note" style={{ marginTop: 10, fontSize: 20 }}>
                 {joinFlash}
               </div>
             )}

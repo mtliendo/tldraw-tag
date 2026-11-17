@@ -13,8 +13,9 @@ export function AdminTokenGate({ userName }: { userName?: string }) {
       .then(async (res) => {
         const body = await res.json();
         if (!res.ok) throw new Error(body.error || "Could not get admin token");
+        if (!body.isAdmin || !body.token) throw new Error(body.error || "Admin sign-in required");
         setToken(body.token);
-        setMode(body.mode);
+        setMode(body.mode ?? "auth0");
       })
       .catch((err) => setError(err.message));
   }, []);

@@ -177,6 +177,21 @@ input[type="radio"] {
   box-shadow: var(--shadow);
 }
 
+.sticky-note,
+.chip.sticky-note {
+  background: #fce19c;
+  color: #1d1d1d;
+  color-scheme: light;
+}
+
+.sticky-note .kicker,
+.sticky-note .muted,
+.sticky-note li,
+.sticky-note a,
+.chip.sticky-note {
+  color: #1d1d1d;
+}
+
 .btn {
   border: var(--stroke) solid var(--ink);
   border-radius: 18px 24px 16px 22px / 22px 16px 24px 18px;

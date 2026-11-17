@@ -84,7 +84,7 @@ export default function PlayPage() {
           <div style={{ minWidth: 0, flex: 1 }}>
             <TopHud view={view} selfPower={me ? { id: me.powerId, charges: me.charges } : undefined} />
             {callout && (
-              <div className="chip" style={{ marginTop: 8, background: "#FCE19C" }}>
+              <div className="chip sticky-note" style={{ marginTop: 8 }}>
                 {callout}
               </div>
             )}
@@ -97,7 +97,7 @@ export default function PlayPage() {
           <div style={{ position: "absolute", top: 12, left: 12, right: 12, zIndex: 6 }}>
             <TopHud view={view} selfPower={me ? { id: me.powerId, charges: me.charges } : undefined} />
             {callout && (
-              <div className="chip" style={{ marginTop: 8, background: "#FCE19C" }}>
+              <div className="chip sticky-note" style={{ marginTop: 8 }}>
                 {callout}
               </div>
             )}
@@ -121,14 +121,17 @@ export default function PlayPage() {
             style={{
               position: "absolute",
               inset: 0,
-              display: "grid",
-              placeItems: "center",
-              padding: 24,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: mobile ? 10 : 24,
               zIndex: 9,
               background: "rgba(247,249,251,0.45)",
+              overflow: "hidden",
+              minHeight: 0,
             }}
           >
-            <Leaderboard view={view} overlay />
+            <Leaderboard view={view} overlay compact={mobile} />
           </div>
         )}
       </section>

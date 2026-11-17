@@ -84,6 +84,9 @@ export function GameCanvas({
       top = Math.min(Math.max(top, zone.y), zone.y + Math.max(0, zone.h - viewH));
       if (viewW >= zone.w) left = zone.x + (zone.w - viewW) / 2;
       if (viewH >= zone.h) top = zone.y + (zone.h - viewH) / 2;
+      // zoomToBounds() never zooms *in* past a fit, so Play-again (full arena)
+      // would stay zoomed-out. Set the follow zoom explicitly.
+      editor.stopCameraAnimation();
       editor.setCamera({ x: -left, y: -top, z: zoom }, { immediate: true, force: true });
     } else {
       editor.zoomToBounds(
@@ -194,7 +197,28 @@ export function GameCanvas({
         );
       }
       const now = Date.now();
-      const laid = layoutPlayers(state.players, state.zone, scale, selfId);
+      const ended = state.phase === "ended";
+      const inset = ended ? 10 : 0;
+      const clampBox = {
+        x: state.zone.x + inset,
+        y: state.zone.y + inset,
+        w: Math.max(48, state.zone.w - inset * 2),
+        h: Math.max(48, state.zone.h - inset * 2),
+      };
+      const hole = ended
+        ? [
+            {
+              x: state.zone.x + state.zone.w * 0.1,
+              y: state.zone.y + state.zone.h * 0.06,
+              w: state.zone.w * 0.8,
+              h: state.zone.h * 0.7,
+            },
+          ]
+        : [];
+      const laid = layoutPlayers(state.players, state.zone, scale, selfId, {
+        clamp: clampBox,
+        avoid: hole,
+      });
       for (const p of laid) {
         const wasIt = prevIt.current.get(p.id);
         if (wasIt !== undefined && wasIt !== p.isIt) {
@@ -262,12 +286,20 @@ export function GameCanvas({
   }, [view, sync]);
 
   const zoneSig = `${view.zone.x.toFixed(0)}:${view.zone.y.toFixed(0)}:${view.zone.w.toFixed(0)}:${view.zone.h.toFixed(0)}`;
+  const phase = view.phase;
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
-    const frame = requestAnimationFrame(() => fit(editor, view));
-    return () => cancelAnimationFrame(frame);
-  }, [zoneSig, fit, view, followPlayer]);
+    let second = 0;
+    const frame = requestAnimationFrame(() => {
+      fit(editor);
+      second = requestAnimationFrame(() => fit(editor));
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      cancelAnimationFrame(second);
+    };
+  }, [zoneSig, phase, fit, followPlayer]);
 
   useEffect(() => {
     const el = wrapRef.current;

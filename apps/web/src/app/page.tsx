@@ -57,7 +57,7 @@ export default function HomePage() {
           padding: 40,
         }}
       >
-        <div className="panel" style={{ padding: 24, maxWidth: 380, transform: "rotate(1.2deg)", background: "#FCE19C" }}>
+        <div className="panel sticky-note" style={{ padding: 24, maxWidth: 380, transform: "rotate(1.2deg)" }}>
           <div className="kicker">How it plays</div>
           <ol style={{ paddingLeft: 18, lineHeight: 1.6 }}>
             <li>Admin signs in, creates a room, throws the QR on a projector.</li>

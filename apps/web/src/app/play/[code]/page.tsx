@@ -10,6 +10,7 @@ import { Joystick } from "@/components/Joystick";
 import { PowerButton } from "@/components/PowerButton";
 import { TopHud } from "@/components/TopHud";
 import { Leaderboard } from "@/components/Leaderboard";
+import { isItCallout } from "@/game/callouts";
 
 export default function PlayPage() {
   const params = useParams<{ code: string }>();
@@ -47,6 +48,7 @@ export default function PlayPage() {
     () => view.players.find((p) => p.sessionId === sessionId),
     [view.players, sessionId],
   );
+  const callout = announce && !isItCallout(announce) ? announce : "";
 
   if (!identity) return null;
 
@@ -55,48 +57,75 @@ export default function PlayPage() {
       style={{
         height: "100dvh",
         display: "grid",
-        gridTemplateRows: mobile ? "auto minmax(0, 1fr) auto" : "1fr",
+        gridTemplateRows: mobile ? "auto auto 1fr" : "1fr",
       }}
     >
       {mobile && (
         <div style={{ padding: "10px 12px 8px", zIndex: 6 }}>
           <TopHud view={view} selfPower={me ? { id: me.powerId, charges: me.charges } : undefined} />
-          {announce && (
+          {callout && (
             <div className="chip" style={{ marginTop: 8, background: "#FCE19C" }}>
-              {announce}
+              {callout}
             </div>
           )}
         </div>
       )}
-      <section style={{ position: "relative", minHeight: 0 }}>
-        {!mobile && (
-          <div style={{ position: "absolute", top: 12, left: 12, right: 12, zIndex: 6 }}>
-            <TopHud view={view} selfPower={me ? { id: me.powerId, charges: me.charges } : undefined} />
-            {announce && (
-              <div className="chip" style={{ marginTop: 8, background: "#FCE19C" }}>
-                {announce}
-              </div>
-            )}
-          </div>
-        )}
-        {error && (
-          <div style={{ position: "absolute", top: 80, left: 16, zIndex: 8, color: "var(--it)" }}>{error}</div>
-        )}
-        <GameCanvas view={view} selfId={me?.id} fitMode={mobile ? "cover" : "contain"} />
-        {view.phase === "lobby" && (
-          <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "end center", padding: 24, zIndex: 6 }}>
-            <div className="panel" style={{ padding: 16, textAlign: "center" }}>
-              <div className="kicker">Lobby {code}</div>
-              <h2>Waiting for the admin to start</h2>
-              <p className="muted">{view.players.length} in the room{connected ? "" : " · connecting"}</p>
+      <section
+        style={{
+          position: "relative",
+          minHeight: 0,
+          display: "grid",
+          placeItems: "center",
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            height: mobile ? undefined : "100%",
+            aspectRatio: mobile ? "16 / 9" : undefined,
+            maxHeight: "100%",
+          }}
+        >
+          {!mobile && (
+            <div style={{ position: "absolute", top: 12, left: 12, right: 12, zIndex: 6 }}>
+              <TopHud view={view} selfPower={me ? { id: me.powerId, charges: me.charges } : undefined} />
+              {callout && (
+                <div className="chip" style={{ marginTop: 8, background: "#FCE19C" }}>
+                  {callout}
+                </div>
+              )}
             </div>
-          </div>
-        )}
-        {view.phase === "ended" && (
-          <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", zIndex: 7 }}>
-            <Leaderboard view={view} overlay />
-          </div>
-        )}
+          )}
+          {error && (
+            <div style={{ position: "absolute", top: 80, left: 16, zIndex: 8, color: "var(--it)" }}>{error}</div>
+          )}
+          <GameCanvas view={view} selfId={me?.id} followZone />
+          {view.phase === "lobby" && (
+            <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "end center", padding: 24, zIndex: 6 }}>
+              <div className="panel" style={{ padding: 16, textAlign: "center" }}>
+                <div className="kicker">Lobby {code}</div>
+                <h2>Waiting for the admin to start</h2>
+                <p className="muted">{view.players.length} in the room{connected ? "" : " · connecting"}</p>
+              </div>
+            </div>
+          )}
+          {view.phase === "ended" && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "grid",
+                placeItems: "center",
+                padding: 24,
+                zIndex: 9,
+                background: "rgba(247,249,251,0.45)",
+              }}
+            >
+              <Leaderboard view={view} overlay />
+            </div>
+          )}
+        </div>
       </section>
       {mobile && (
         <section
@@ -104,9 +133,9 @@ export default function PlayPage() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "12px 18px 28px",
+            padding: "16px 18px 32px",
             background: "var(--card)",
-            borderTop: "2.5px solid var(--ink)",
+            borderTop: "1.5px solid var(--ink)",
           }}
         >
           <Joystick onChange={sendInput} />

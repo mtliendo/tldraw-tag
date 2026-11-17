@@ -43,7 +43,7 @@ export function AvatarGlyph({
     case "cat":
       return (
         <svg {...common}>
-          <path d="M4 19c0-6 3.5-10 8-10s8 4 8 10H4zm2-10l3-5 3 4 3-4 3 5" fill="none" stroke={stroke} strokeWidth="2" />
+          <path d="M4 19c0-6 3.5-10 8-10s8 4 8 10H4zm2-10l3-5 3 4 3-4 3 5" fill="none" stroke={stroke} strokeWidth="1.5" />
         </svg>
       );
     case "bird":

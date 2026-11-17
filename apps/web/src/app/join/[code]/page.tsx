@@ -41,11 +41,11 @@ export default function JoinPage() {
               style={{
                 aspectRatio: "1",
                 borderRadius: "50%",
-                border: avatar === a.id ? "3px solid var(--ink)" : "2px solid var(--ink)",
+                border: avatar === a.id ? "1.5px solid var(--ink)" : "1.5px solid var(--ink)",
                 background: a.color,
                 display: "grid",
                 placeItems: "center",
-                boxShadow: avatar === a.id ? "3px 3px 0 var(--ink)" : "none",
+                boxShadow: avatar === a.id ? "var(--shadow)" : "none",
                 transform: avatar === a.id ? "rotate(-4deg) scale(1.04)" : "rotate(2deg)",
               }}
               aria-label={a.label}

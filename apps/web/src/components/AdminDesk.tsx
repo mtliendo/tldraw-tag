@@ -109,7 +109,7 @@ export function AdminDesk({
                       color: POWER_UPS[id].ink,
                       fontWeight: 700,
                       padding: "1px 8px",
-                      border: "2px solid var(--ink)",
+                      border: "1.5px solid var(--ink)",
                       transform: "rotate(-2deg)",
                     }}
                   >
@@ -192,7 +192,17 @@ export function AdminDesk({
             </div>
             <GameCanvas view={view} />
             {view.phase === "ended" && (
-              <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", zIndex: 7 }}>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  padding: 48,
+                  zIndex: 9,
+                  background: "rgba(247,249,251,0.45)",
+                }}
+              >
                 <Leaderboard view={view} overlay />
               </div>
             )}

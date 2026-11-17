@@ -55,10 +55,10 @@ export function Joystick({
         height: 156,
         borderRadius: "48% 52% 46% 54%",
         background: "#FCE19C",
-        border: "3px solid var(--ink)",
+        border: "1.5px solid var(--ink)",
         position: "relative",
         touchAction: "none",
-        boxShadow: "3px 3px 0 var(--ink)",
+        boxShadow: "var(--shadow)",
       }}
       aria-label="Move"
     >
@@ -69,12 +69,12 @@ export function Joystick({
           height: 64,
           borderRadius: "46% 54% 50% 50%",
           background: "#4ba1f1",
-          border: "3px solid var(--ink)",
+          border: "1.5px solid var(--ink)",
           position: "absolute",
           left: "50%",
           top: "50%",
           margin: "-32px 0 0 -32px",
-          boxShadow: "2px 2px 0 var(--ink)",
+          boxShadow: "var(--shadow)",
         }}
       />
       <div

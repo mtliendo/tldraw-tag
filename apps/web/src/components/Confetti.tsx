@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 const BITS = [
   { left: "8%", delay: "0s", color: "#f1ac4b", rotate: -12, kind: "star" },
   { left: "18%", delay: "0.12s", color: "#4465e9", rotate: 18, kind: "dot" },
@@ -15,14 +17,14 @@ function Bit({ kind, color }: { kind: string; color: string }) {
   if (kind === "star") {
     return (
       <svg width="22" height="22" viewBox="0 0 24 24">
-        <path fill={color} stroke="#1d1d1d" strokeWidth="1.4" d="M12 2l2.2 6.4H21l-5.4 4 2 6.6L12 15.6 6.4 19l2-6.6L3 8.4h6.8z" />
+        <path fill={color} stroke="#1d1d1d" strokeWidth="1.5" d="M12 2l2.2 6.4H21l-5.4 4 2 6.6L12 15.6 6.4 19l2-6.6L3 8.4h6.8z" />
       </svg>
     );
   }
   if (kind === "squiggle") {
     return (
       <svg width="28" height="16" viewBox="0 0 28 16">
-        <path d="M2 10c4-8 8 8 12 0s8 8 12 0" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        <path d="M2 10c4-8 8 8 12 0s8 8 12 0" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     );
   }
@@ -35,12 +37,18 @@ function Bit({ kind, color }: { kind: string; color: string }) {
   }
   return (
     <svg width="14" height="14" viewBox="0 0 14 14">
-      <circle cx="7" cy="7" r="5.5" fill={color} stroke="#1d1d1d" strokeWidth="1.4" />
+      <circle cx="7" cy="7" r="5.5" fill={color} stroke="#1d1d1d" strokeWidth="1.5" />
     </svg>
   );
 }
 
 export function Confetti() {
+  const [alive, setAlive] = useState(true);
+  useEffect(() => {
+    const t = window.setTimeout(() => setAlive(false), 2100);
+    return () => window.clearTimeout(t);
+  }, []);
+  if (!alive) return null;
   return (
     <div
       aria-hidden
@@ -49,7 +57,7 @@ export function Confetti() {
         inset: 0,
         overflow: "hidden",
         pointerEvents: "none",
-        zIndex: 8,
+        zIndex: 6,
       }}
     >
       {BITS.map((bit, i) => (
@@ -60,7 +68,7 @@ export function Confetti() {
             left: bit.left,
             top: "-8%",
             animationDelay: bit.delay,
-            transform: `rotate(${bit.rotate}deg)`,
+            ["--spin" as string]: `${bit.rotate}deg`,
           }}
         >
           <Bit kind={bit.kind} color={bit.color} />

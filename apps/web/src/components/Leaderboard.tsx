@@ -18,9 +18,11 @@ export function Leaderboard({
       style={{
         padding: 24,
         minWidth: 280,
-        maxWidth: 420,
+        maxWidth: 440,
+        maxHeight: "78vh",
+        overflow: "auto",
         background: overlay ? "#fff" : undefined,
-        transform: "rotate(-1deg)",
+        transform: "rotate(-0.6deg)",
       }}
     >
       <div className="kicker">end of round</div>
@@ -49,7 +51,7 @@ export function Leaderboard({
                   height: 18,
                   borderRadius: "46% 54% 50% 50%",
                   background: avatar.color,
-                  border: "2px solid var(--ink)",
+                  border: "1.5px solid var(--ink)",
                 }}
               />
               <strong style={{ flex: 1 }}>

@@ -9,7 +9,7 @@ import {
   type RecordProps,
   type TLShape,
 } from "tldraw";
-import { POWER_UPS, avatarById, type PowerId } from "@inkt/shared";
+import { POWER_UPS, STROKE, avatarById, type PowerId } from "@inkt/shared";
 import { AvatarGlyph } from "@/components/AvatarGlyph";
 import { PowerGlyph } from "@/components/PowerGlyph";
 import { blobPath, wobbleRectPath } from "./wobble";
@@ -39,6 +39,7 @@ declare module "tldraw" {
       squash: boolean;
       showLabel: boolean;
       playerId: string;
+      labelScale: number;
     };
     "inkt-power": { w: number; h: number; kind: string };
     "inkt-pulse": { w: number; h: number; kind: string; progress: number };
@@ -66,8 +67,6 @@ function rectPath(w: number, h: number) {
 function RectIndicator({ w, h }: { w: number; h: number }) {
   return <rect width={w} height={h} />;
 }
-
-const STROKE = 3;
 
 function DrawRect({
   w,
@@ -263,6 +262,7 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
     squash: T.boolean,
     showLabel: T.boolean,
     playerId: T.string,
+    labelScale: T.number,
   };
   getDefaultProps() {
     return {
@@ -284,6 +284,7 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
       squash: false,
       showLabel: true,
       playerId: "",
+      labelScale: 1,
     };
   }
   getGeometry(shape: PlayerShape) {
@@ -359,19 +360,9 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
               style={{
                 position: "absolute",
                 left: shape.props.w / 2,
-                top: token + 4 + shape.props.labelStack * 18,
-                transform: "translateX(-50%)",
-                fontSize: 12,
+                top: token + 4 * shape.props.labelScale + shape.props.labelStack * 18 * shape.props.labelScale,
                 fontWeight: 600,
                 color: shape.props.isIt ? "#e03131" : "#1d1d1d",
-                background: "rgba(255,255,255,0.92)",
-                padding: "1px 7px",
-                borderRadius: 999,
-                border: "1.5px solid #1d1d1d",
-                maxWidth: 88,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
               }}
             >
               {shape.props.isIt ? `it · ${shape.props.name}` : shape.props.name}

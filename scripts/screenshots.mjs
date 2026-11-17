@@ -72,10 +72,11 @@ await admin.getByRole("button", { name: /^start$/i }).click();
 await admin.waitForTimeout(900);
 await admin.getByRole("button", { name: /showcase/i }).click();
 await admin.waitForFunction(() => /boost/i.test(document.body.innerText), null, { timeout: 8000 });
-await admin.waitForTimeout(2200);
+await admin.waitForTimeout(2400);
 await shot(admin, "04-ingame-powers.png");
 await shot(join, "04b-player.png");
 await shot(screen, "07-projector.png");
+await joinPhone.waitForTimeout(400);
 await shot(joinPhone, "04c-player-mobile.png");
 
 await admin.waitForTimeout(7000);
@@ -83,7 +84,7 @@ await shot(admin, "05-shrinking-zone.png");
 await shot(screen, "05b-projector-zone.png");
 
 await admin.waitForSelector("text=was IT", { timeout: 30000 });
-await admin.waitForTimeout(800);
+await admin.waitForTimeout(2400);
 await shot(admin, "06-leaderboard.png");
 await shot(screen, "06b-projector-end.png");
 

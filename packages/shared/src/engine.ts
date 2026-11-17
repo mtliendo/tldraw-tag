@@ -16,6 +16,7 @@ import {
   PLAYER_SPEED,
   POWER_MAX_ON_BOARD,
   POWER_PULSE_WARN,
+  POWER_RADIUS,
   POWER_SPAWN_MAX,
   POWER_SPAWN_MIN,
   SPEED_DURATION,
@@ -33,7 +34,16 @@ import {
 } from "./constants";
 import { AVATARS } from "./avatars";
 import { pickWeightedPower, POWER_UPS, type PowerId } from "./powerups";
-import { clamp, dist, lerp, lerpRect, makeRoomCode, normalize, uid } from "./ids";
+import {
+  circleHitsAabb,
+  clamp,
+  dist,
+  lerpRect,
+  makeRoomCode,
+  normalize,
+  separateCircleFromAabb,
+  uid,
+} from "./ids";
 import type {
   AdminConfig,
   EngineDecoy,
@@ -259,31 +269,66 @@ export class TagEngine {
     ];
     for (const gem of gems) {
       const id = uid("pow");
+      const clear = this.clearOfPlayers(z.x + z.w * gem.fx, z.y + z.h * gem.fy, PLAYER_RADIUS + POWER_RADIUS + 8);
       s.powerUps[id] = {
         id,
         kind: gem.kind,
-        x: z.x + z.w * gem.fx,
-        y: z.y + z.h * gem.fy,
+        x: clear.x,
+        y: clear.y,
       };
     }
     const pulseId = uid("pow");
+    const pulseAt = this.clearOfPlayers(z.x + z.w * 0.18, z.y + z.h * 0.72, PLAYER_RADIUS + POWER_RADIUS + 8);
     s.pulses[pulseId] = {
       id: pulseId,
       kind: "decoy",
-      x: z.x + z.w * 0.18,
-      y: z.y + z.h * 0.72,
+      x: pulseAt.x,
+      y: pulseAt.y,
       spawnAt: s.now + 0.9,
     };
 
-    const wallId = uid("wall");
-    s.walls[wallId] = {
-      id: wallId,
-      x: z.x + z.w * 0.32,
-      y: z.y + z.h * 0.32,
-      w: WALL_WIDTH,
-      h: WALL_THICKNESS,
-      expiresAt: s.now + 18,
-    };
+    const wallCandidates = [
+      { fx: 0.72, fy: 0.18 },
+      { fx: 0.58, fy: 0.16 },
+      { fx: 0.8, fy: 0.28 },
+      { fx: 0.5, fy: 0.2 },
+    ];
+    let placedWall = false;
+    for (const spot of wallCandidates) {
+      const wall = {
+        id: uid("wall"),
+        x: z.x + z.w * spot.fx - WALL_WIDTH / 2,
+        y: z.y + z.h * spot.fy - WALL_THICKNESS / 2,
+        w: WALL_WIDTH,
+        h: WALL_THICKNESS,
+        expiresAt: s.now + 18,
+      };
+      wall.x = clamp(wall.x, z.x, z.x + z.w - wall.w);
+      wall.y = clamp(wall.y, z.y, z.y + z.h - wall.h);
+      if (!this.wallHitsAnyPlayer(wall)) {
+        s.walls[wall.id] = wall;
+        placedWall = true;
+        break;
+      }
+    }
+    if (!placedWall) {
+      for (let i = 0; i < 16; i++) {
+        const pos = this.randomInZone(40);
+        const wall = {
+          id: uid("wall"),
+          x: pos.x - WALL_WIDTH / 2,
+          y: pos.y - WALL_THICKNESS / 2,
+          w: WALL_WIDTH,
+          h: WALL_THICKNESS,
+          expiresAt: s.now + 18,
+        };
+        wall.x = clamp(wall.x, z.x, z.x + z.w - wall.w);
+        wall.y = clamp(wall.y, z.y, z.y + z.h - wall.h);
+        if (this.wallHitsAnyPlayer(wall)) continue;
+        s.walls[wall.id] = wall;
+        break;
+      }
+    }
 
     const players = Object.values(s.players);
     const freezeTarget = players.find((p) => !p.isIt && p.isBot) ?? players.find((p) => !p.isIt);
@@ -335,8 +380,9 @@ export class TagEngine {
       roundLength: s.roundLength,
       zone: s.zone,
       targetZone: s.shrinkEndsAt > s.now ? s.targetZone : nextZone(s.zone),
-      shrinkIn: s.shrinkEndsAt > s.now ? 0 : Math.max(0, s.nextShrinkAt - s.now),
-      shrinking: s.shrinkEndsAt > s.now,
+      shrinkIn:
+        s.phase === "playing" && s.shrinkEndsAt <= s.now ? Math.max(0, s.nextShrinkAt - s.now) : 0,
+      shrinking: s.phase === "playing" && s.shrinkEndsAt > s.now,
       itId: s.itId,
       itName: it?.name ?? "",
       enabledPowers: s.enabledPowers,
@@ -492,7 +538,8 @@ export class TagEngine {
     const kind = pickWeightedPower(s.enabledPowers, this.rand);
     if (!kind) return;
     if (Object.keys(s.powerUps).length + Object.keys(s.pulses).length >= POWER_MAX_ON_BOARD) return;
-    const pos = this.randomInZone(36);
+    const guess = this.randomInZone(PLAYER_RADIUS + POWER_RADIUS);
+    const pos = this.clearOfPlayers(guess.x, guess.y, PLAYER_RADIUS + POWER_RADIUS + 8);
     const id = uid("pow");
     s.pulses[id] = { id, kind, x: pos.x, y: pos.y, spawnAt: s.now + POWER_PULSE_WARN };
   }
@@ -522,25 +569,22 @@ export class TagEngine {
         p.facingY = iy / (mag || 1);
       }
       p.x += p.vx * dt;
+      if (p.ghostUntil <= s.now) this.collideWalls(p);
       p.y += p.vy * dt;
       if (p.ghostUntil <= s.now) this.collideWalls(p);
       this.clampPlayer(p);
+      if (p.ghostUntil <= s.now) this.collideWalls(p);
       if (!p.isIt) p.score += dt;
     }
   }
 
   private collideWalls(p: EnginePlayer) {
-    for (const wall of Object.values(this.state.walls)) {
-      const nearestX = clamp(p.x, wall.x, wall.x + wall.w);
-      const nearestY = clamp(p.y, wall.y, wall.y + wall.h);
-      const dx = p.x - nearestX;
-      const dy = p.y - nearestY;
-      const d2 = dx * dx + dy * dy;
-      const r = PLAYER_RADIUS;
-      if (d2 >= r * r) continue;
-      const d = Math.sqrt(d2) || 0.001;
-      p.x = nearestX + (dx / d) * r;
-      p.y = nearestY + (dy / d) * r;
+    for (let pass = 0; pass < 3; pass++) {
+      for (const wall of Object.values(this.state.walls)) {
+        const next = separateCircleFromAabb(p.x, p.y, PLAYER_RADIUS, wall);
+        p.x = next.x;
+        p.y = next.y;
+      }
     }
   }
 
@@ -621,8 +665,7 @@ export class TagEngine {
         p.hasShield = true;
         return true;
       case "paver":
-        this.placeWall(p);
-        return true;
+        return this.placeWall(p);
       case "decoy": {
         const n = normalize(p.facingX, p.facingY);
         const id = uid("dcy");
@@ -667,6 +710,8 @@ export class TagEngine {
         target.y = y;
         this.clampPlayer(p);
         this.clampPlayer(target);
+        if (p.ghostUntil <= s.now) this.collideWalls(p);
+        if (target.ghostUntil <= s.now) this.collideWalls(target);
         return true;
       }
       default:
@@ -674,25 +719,40 @@ export class TagEngine {
     }
   }
 
-  private placeWall(p: EnginePlayer) {
+  private placeWall(p: EnginePlayer): boolean {
     const n = normalize(p.facingX || 1, p.facingY);
-    const cx = p.x + n.x * WALL_PLACE_OFFSET;
-    const cy = p.y + n.y * WALL_PLACE_OFFSET;
-    const horizontal = Math.abs(n.x) < Math.abs(n.y);
+    const dir = n.x === 0 && n.y === 0 ? { x: 1, y: 0 } : n;
+    const horizontal = Math.abs(dir.x) < Math.abs(dir.y);
     const w = horizontal ? WALL_WIDTH : WALL_THICKNESS;
     const h = horizontal ? WALL_THICKNESS : WALL_WIDTH;
-    const wall: EngineWall = {
-      id: uid("wall"),
-      x: cx - w / 2,
-      y: cy - h / 2,
-      w,
-      h,
-      expiresAt: this.state.now + WALL_LIFETIME,
-    };
     const z = this.state.zone;
-    wall.x = clamp(wall.x, z.x, z.x + z.w - wall.w);
-    wall.y = clamp(wall.y, z.y, z.y + z.h - wall.h);
-    this.state.walls[wall.id] = wall;
+    for (const extra of [0, 28, 56, 84, -28, 112]) {
+      const reach = WALL_PLACE_OFFSET + extra;
+      const cx = p.x + dir.x * reach;
+      const cy = p.y + dir.y * reach;
+      const wall: EngineWall = {
+        id: uid("wall"),
+        x: cx - w / 2,
+        y: cy - h / 2,
+        w,
+        h,
+        expiresAt: this.state.now + WALL_LIFETIME,
+      };
+      wall.x = clamp(wall.x, z.x, z.x + z.w - wall.w);
+      wall.y = clamp(wall.y, z.y, z.y + z.h - wall.h);
+      if (this.wallHitsAnyPlayer(wall)) continue;
+      this.state.walls[wall.id] = wall;
+      return true;
+    }
+    return false;
+  }
+
+  private wallHitsAnyPlayer(wall: { x: number; y: number; w: number; h: number }) {
+    for (const p of Object.values(this.state.players)) {
+      if (p.ghostUntil > this.state.now) continue;
+      if (circleHitsAabb(p.x, p.y, PLAYER_RADIUS + 1, wall).hit) return true;
+    }
+    return false;
   }
 
   private thinkBots() {
@@ -798,6 +858,22 @@ export class TagEngine {
     };
   }
 
+  private clearOfPlayers(x: number, y: number, minDist: number) {
+    const first = { x, y };
+    for (let i = 0; i < 28; i++) {
+      const pos = i === 0 ? first : this.randomInZone(PLAYER_RADIUS + POWER_RADIUS);
+      let ok = true;
+      for (const p of Object.values(this.state.players)) {
+        if (dist(p.x, p.y, pos.x, pos.y) < minDist) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) return pos;
+    }
+    return first;
+  }
+
   private refreshLeaderboard() {
     this.state.leaderboard = Object.values(this.state.players)
       .map(
@@ -837,4 +913,12 @@ export function formatTime(seconds: number): string {
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${m}:${r.toString().padStart(2, "0")}`;
+}
+
+export function phaseStatus(state: { phase: string; shrinking: boolean }): string {
+  if (state.phase === "lobby") return "lobby";
+  if (state.phase === "ended") return "ended";
+  if (state.phase === "paused") return "paused";
+  if (state.shrinking) return "zone shrinking";
+  return "playing";
 }

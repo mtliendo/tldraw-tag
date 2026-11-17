@@ -1,6 +1,6 @@
 "use client";
 
-import { formatTime, POWER_UPS, type PowerId } from "@inkt/shared";
+import { formatTime, phaseStatus, POWER_UPS, type PowerId } from "@inkt/shared";
 import type { ViewState } from "@/game/types";
 
 export function TopHud({
@@ -23,13 +23,15 @@ export function TopHud({
       <div className="chip" style={{ fontSize: 22 }}>
         {view.phase === "ended" ? "final" : formatTime(view.timeLeft)}
       </div>
-      <div className="chip" style={{ background: view.itName ? "#f87777" : undefined }}>
-        <span className="kicker" style={{ margin: 0 }}>
-          it
-        </span>
-        <strong>{view.itName || "—"}</strong>
-      </div>
-      <div className="chip">{view.phase}</div>
+      {view.phase !== "ended" && (
+        <div className="chip" style={{ background: view.itName ? "#f87777" : undefined }}>
+          <span className="kicker" style={{ margin: 0 }}>
+            it
+          </span>
+          <strong>{view.itName || "—"}</strong>
+        </div>
+      )}
+      <div className="chip">{phaseStatus(view)}</div>
       {def && (
         <div className="chip" style={{ background: def.color, color: def.ink }}>
           {def.label} · {selfPower?.charges}

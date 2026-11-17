@@ -21,9 +21,9 @@ function overlap(
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
-export function layoutPlayers(players: ViewPlayer[], zone: Zone): LaidOutPlayer[] {
+export function layoutPlayers(players: ViewPlayer[], _zone: Zone, labelScale = 1): LaidOutPlayer[] {
   const r = PLAYER_TOKEN / 2;
-  const lh = PLAYER_LABEL_H;
+  const lh = PLAYER_LABEL_H * labelScale;
   const laid: LaidOutPlayer[] = players.map((p) => ({
     ...p,
     labelX: 0,
@@ -31,31 +31,6 @@ export function layoutPlayers(players: ViewPlayer[], zone: Zone): LaidOutPlayer[
     labelStack: 0,
     labelW: labelWidth(p.name),
   }));
-
-  const minSep = PLAYER_TOKEN + 40;
-  for (let iter = 0; iter < 14; iter++) {
-    for (let i = 0; i < laid.length; i++) {
-      for (let j = 0; j < i; j++) {
-        const dx = laid[i].x - laid[j].x;
-        const dy = laid[i].y - laid[j].y;
-        const d = Math.hypot(dx, dy) || 0.01;
-        if (d >= minSep) continue;
-        const push = (minSep - d) / 2;
-        const ux = dx / d;
-        const uy = dy / d;
-        laid[i].x += ux * push;
-        laid[i].y += uy * push;
-        laid[j].x -= ux * push;
-        laid[j].y -= uy * push;
-      }
-    }
-  }
-
-  const pad = r + 8;
-  for (const p of laid) {
-    p.x = Math.max(zone.x + pad, Math.min(zone.x + zone.w - pad, p.x));
-    p.y = Math.max(zone.y + pad, Math.min(zone.y + zone.h - pad, p.y));
-  }
 
   const rect = (p: LaidOutPlayer) => ({
     x: p.x - p.labelW / 2,

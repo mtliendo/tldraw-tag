@@ -16,36 +16,37 @@ const LABEL_CROWD = 15;
 export function GameCanvas({
   view,
   selfId,
-  fitMode = "contain",
+  followZone = false,
   interactive = false,
+  labelScale = 1,
 }: {
   view: ViewState;
   selfId?: string | null;
-  fitMode?: "contain" | "cover";
+  followZone?: boolean;
   interactive?: boolean;
+  labelScale?: number;
 }) {
   const editorRef = useRef<Editor | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
   const known = useRef(new Set<TLShapeId>());
   const prevIt = useRef(new Map<string, boolean>());
   const squashUntil = useRef(new Map<string, number>());
-  const fitModeRef = useRef(fitMode);
-  fitModeRef.current = fitMode;
+  const followZoneRef = useRef(followZone);
+  followZoneRef.current = followZone;
+  const labelScaleRef = useRef(labelScale);
+  labelScaleRef.current = labelScale;
+  const viewRef = useRef(view);
+  viewRef.current = view;
   const [hoverId, setHoverId] = useState<string | null>(null);
 
-  const fit = useCallback((editor: Editor) => {
+  const fit = useCallback((editor: Editor, zone = viewRef.current.zone) => {
     editor.setCameraOptions({ isLocked: false });
-    if (fitModeRef.current === "cover") {
-      const vsb = editor.getViewportScreenBounds();
-      const aspect = vsb.w / Math.max(1, vsb.h);
-      let bw = ARENA_W;
-      let bh = ARENA_W / aspect;
-      if (bh > ARENA_H) {
-        bh = ARENA_H;
-        bw = ARENA_H * aspect;
-      }
-      const bx = (ARENA_W - bw) / 2;
-      const by = (ARENA_H - bh) / 2;
-      editor.zoomToBounds({ x: bx, y: by, w: bw, h: bh }, { inset: 6, animation: { duration: 0 } });
+    if (followZoneRef.current) {
+      const pad = 28 * labelScaleRef.current;
+      editor.zoomToBounds(
+        { x: zone.x - pad, y: zone.y - pad, w: zone.w + pad * 2, h: zone.h + pad * 2 },
+        { inset: 6, animation: { duration: 0 } },
+      );
     } else {
       editor.zoomToBounds(
         { x: -48, y: -48, w: ARENA_W + 96, h: ARENA_H + 96 },
@@ -60,6 +61,8 @@ export function GameCanvas({
     (editor: Editor, state: ViewState) => {
       const next = new Set<TLShapeId>();
       const puts: any[] = [];
+      const playerIds: TLShapeId[] = [];
+      const decoyIds: TLShapeId[] = [];
       const make = (key: string, partial: object) => {
         const id = createShapeId(key);
         next.add(id);
@@ -69,11 +72,13 @@ export function GameCanvas({
           editor.createShape({ id, ...partial } as any);
           known.current.add(id);
         }
+        return id;
       };
 
       const warning =
         !state.shrinking && state.shrinkIn > 0 && state.shrinkIn <= ZONE_WARN_SECONDS ? 1 : 0;
       const crowded = state.players.length > LABEL_CROWD;
+      const scale = labelScaleRef.current;
 
       make("arena", {
         type: "inkt-arena",
@@ -136,15 +141,17 @@ export function GameCanvas({
         });
       }
       for (const decoy of state.decoys) {
-        make(`decoy:${decoy.id}`, {
-          type: "inkt-decoy",
-          x: decoy.x - 40,
-          y: decoy.y - 40,
-          props: { w: 80, h: 80, name: decoy.name, avatar: decoy.avatar },
-        });
+        decoyIds.push(
+          make(`decoy:${decoy.id}`, {
+            type: "inkt-decoy",
+            x: decoy.x - 40,
+            y: decoy.y - 40,
+            props: { w: 80, h: 80, name: decoy.name, avatar: decoy.avatar },
+          }),
+        );
       }
       const now = Date.now();
-      const laid = layoutPlayers(state.players, state.zone);
+      const laid = layoutPlayers(state.players, state.zone, scale);
       for (const p of laid) {
         const wasIt = prevIt.current.get(p.id);
         if (wasIt !== undefined && wasIt !== p.isIt) {
@@ -154,32 +161,35 @@ export function GameCanvas({
         const stack = p.labelStack ?? 0;
         const showLabel =
           p.isIt || p.id === selfId || p.frozen || !crowded || p.id === hoverId;
-        const boxH = TOKEN_R * 2 + 8 + (showLabel ? 20 + stack * 18 : 0);
-        make(`player:${p.id}`, {
-          type: "inkt-player",
-          x: p.x - 70,
-          y: p.y - TOKEN_R,
-          props: {
-            w: 140,
-            h: boxH,
-            name: p.name,
-            avatar: p.avatar,
-            isIt: p.isIt,
-            ghost: p.ghost,
-            frozen: p.frozen,
-            boosting: p.boosting,
-            hasShield: p.hasShield,
-            powerId: p.powerId,
-            charges: p.charges,
-            self: p.id === selfId,
-            labelX: p.labelX,
-            labelAbove: false,
-            labelStack: stack,
-            squash: (squashUntil.current.get(p.id) ?? 0) > now,
-            showLabel,
-            playerId: p.id,
-          },
-        });
+        const boxH = TOKEN_R * 2 + 8 + (showLabel ? (20 + stack * 18) * scale : 0);
+        playerIds.push(
+          make(`player:${p.id}`, {
+            type: "inkt-player",
+            x: p.x - 70,
+            y: p.y - TOKEN_R,
+            props: {
+              w: 140,
+              h: boxH,
+              name: p.name,
+              avatar: p.avatar,
+              isIt: p.isIt,
+              ghost: p.ghost,
+              frozen: p.frozen,
+              boosting: p.boosting,
+              hasShield: p.hasShield,
+              powerId: p.powerId,
+              charges: p.charges,
+              self: p.id === selfId,
+              labelX: p.labelX,
+              labelAbove: false,
+              labelStack: stack,
+              squash: (squashUntil.current.get(p.id) ?? 0) > now,
+              showLabel,
+              playerId: p.id,
+              labelScale: scale,
+            },
+          }),
+        );
       }
 
       const stale = [...known.current].filter((id) => !next.has(id));
@@ -188,6 +198,8 @@ export function GameCanvas({
         for (const id of stale) known.current.delete(id);
       }
       if (puts.length) editor.updateShapes(puts);
+      if (decoyIds.length) editor.bringToFront(decoyIds);
+      if (playerIds.length) editor.bringToFront(playerIds);
     },
     [selfId, hoverId],
   );
@@ -198,9 +210,29 @@ export function GameCanvas({
     editor.store.mergeRemoteChanges(() => sync(editor, view));
   }, [view, sync]);
 
+  const zoneSig = `${view.zone.x.toFixed(0)}:${view.zone.y.toFixed(0)}:${view.zone.w.toFixed(0)}:${view.zone.h.toFixed(0)}`;
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || !followZone) return;
+    fit(editor, view.zone);
+  }, [zoneSig, followZone, fit, view.zone]);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const editor = editorRef.current;
+      if (editor) fit(editor);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fit]);
+
   return (
     <div
+      ref={wrapRef}
       className={interactive ? "board-wrap interactive" : "board-wrap"}
+      style={{ ["--inkt-label-scale" as string]: String(labelScale) }}
       onPointerOver={(e) => {
         if (!interactive) return;
         const el = (e.target as HTMLElement).closest("[data-player-id]");
@@ -215,6 +247,7 @@ export function GameCanvas({
         licenseKey={license}
         hideUi
         shapeUtils={INKT_SHAPES}
+        options={{ zoomToFitPadding: 0 }}
         onMount={(editor) => {
           editorRef.current = editor;
           editor.updateInstanceState({ isGridMode: false });
@@ -223,13 +256,10 @@ export function GameCanvas({
           known.current = new Set();
           sync(editor, view);
           fit(editor);
-          const onResize = () => fit(editor);
           requestAnimationFrame(() => fit(editor));
-          window.addEventListener("resize", onResize);
           editor.sideEffects.registerAfterChangeHandler("instance_page_state", () => {
             if (editor.getSelectedShapeIds().length) editor.setSelectedShapes([]);
           });
-          return () => window.removeEventListener("resize", onResize);
         }}
       />
       {view.phase === "ended" && <Confetti />}

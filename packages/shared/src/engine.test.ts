@@ -1,8 +1,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { TagEngine } from "./engine";
-import { ARENA_H, ARENA_W, ZONE_INSET, ZONE_MIN_H, ZONE_MIN_W } from "./constants";
-import { rng } from "./ids";
+import {
+  ARENA_H,
+  ARENA_W,
+  PLAYER_RADIUS,
+  POWER_RADIUS,
+  WALL_THICKNESS,
+  WALL_WIDTH,
+  ZONE_INSET,
+  ZONE_MIN_H,
+  ZONE_MIN_W,
+} from "./constants";
+import { circleHitsAabb, dist, rng } from "./ids";
 
 describe("TagEngine loop", () => {
   it("runs create -> bots -> play -> shrink -> leaderboard", () => {
@@ -108,5 +118,108 @@ describe("TagEngine loop", () => {
       return dx * dx + dy * dy > 64;
     });
     assert.ok(moved.length >= 5);
+  });
+
+  it("does not spawn power-ups on players", () => {
+    const engine = new TagEngine({ roundLength: 20, shrinkInterval: 20, rand: rng(77) });
+    engine.addPlayer({ name: "Ada", avatar: "bolt" });
+    engine.addPlayer({ name: "Bea", avatar: "orb" });
+    engine.start();
+    const [a, b] = Object.values(engine.state.players);
+    a.x = 420;
+    a.y = 380;
+    b.x = 820;
+    b.y = 540;
+    engine.state.nextPowerAt = 0;
+    let spawned = 0;
+    for (let i = 0; i < 80; i++) {
+      engine.tick(0.05);
+      const loot = [...Object.values(engine.state.powerUps), ...Object.values(engine.state.pulses)];
+      spawned += loot.length;
+      for (const item of loot) {
+        for (const p of Object.values(engine.state.players)) {
+          assert.ok(
+            dist(p.x, p.y, item.x, item.y) >= PLAYER_RADIUS + POWER_RADIUS,
+            "loot overlapped a player",
+          );
+        }
+      }
+    }
+    assert.ok(spawned > 0);
+  });
+
+  it("blocks players on paver walls, slides along them, and lets ghosts through", () => {
+    const engine = new TagEngine({ roundLength: 20, rand: rng(5) });
+    const a = engine.addPlayer({ id: "a", name: "Ada", avatar: "bolt" });
+    engine.addPlayer({ id: "b", name: "Bea", avatar: "orb" });
+    engine.start();
+    engine.state.walls.w1 = {
+      id: "w1",
+      x: 500,
+      y: 300,
+      w: WALL_THICKNESS,
+      h: WALL_WIDTH,
+      expiresAt: 999,
+    };
+    a.x = 430;
+    a.y = 370;
+    a.ghostUntil = 0;
+    engine.setInput(a.id, { x: 1, y: -0.4, usePower: false });
+    const startY = a.y;
+    for (let i = 0; i < 16; i++) engine.tick(0.05);
+    assert.equal(circleHitsAabb(a.x, a.y, PLAYER_RADIUS - 0.05, engine.state.walls.w1).hit, false);
+    assert.ok(a.x + PLAYER_RADIUS <= 500 + 1.5);
+    assert.ok(a.y < startY - 8, "should slide along the wall");
+
+    a.ghostUntil = engine.state.now + 8;
+    engine.setInput(a.id, { x: 1, y: 0, usePower: false });
+    for (let i = 0; i < 30; i++) engine.tick(0.05);
+    assert.ok(a.x > 500 + WALL_THICKNESS, "ghost should pass through");
+  });
+
+  it("pushes a player out if they spawn inside a wall", () => {
+    const engine = new TagEngine({ roundLength: 12, rand: rng(8) });
+    const a = engine.addPlayer({ id: "a", name: "Ada", avatar: "bolt" });
+    engine.addPlayer({ id: "b", name: "Bea", avatar: "orb" });
+    engine.start();
+    engine.state.walls.w1 = {
+      id: "w1",
+      x: 600,
+      y: 400,
+      w: WALL_WIDTH,
+      h: WALL_THICKNESS,
+      expiresAt: 999,
+    };
+    a.x = 650;
+    a.y = 413;
+    engine.setInput(a.id, { x: 0, y: 0, usePower: false });
+    engine.tick(0.05);
+    assert.equal(circleHitsAabb(a.x, a.y, PLAYER_RADIUS - 0.05, engine.state.walls.w1).hit, false);
+  });
+
+  it("never places a paver wall on a player", () => {
+    const engine = new TagEngine({ roundLength: 16, rand: rng(13) });
+    const a = engine.addPlayer({ id: "a", name: "Ada", avatar: "bolt" });
+    const b = engine.addPlayer({ id: "b", name: "Bea", avatar: "orb" });
+    engine.start();
+    a.x = 500;
+    a.y = 420;
+    a.facingX = 1;
+    a.facingY = 0;
+    b.x = 564;
+    b.y = 420;
+    a.powerId = "paver";
+    a.charges = 3;
+    engine.setInput(a.id, { x: 0, y: 0, usePower: true });
+    engine.tick(0.05);
+    for (const wall of Object.values(engine.state.walls)) {
+      for (const p of Object.values(engine.state.players)) {
+        assert.equal(
+          circleHitsAabb(p.x, p.y, PLAYER_RADIUS, wall).hit,
+          false,
+          `${p.name} overlapped a newly placed wall`,
+        );
+      }
+    }
   });
 });

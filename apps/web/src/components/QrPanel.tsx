@@ -37,10 +37,10 @@ export function QrPanel({
         style={{
           background: "white",
           padding: 8,
-          border: "2.5px solid var(--ink)",
+          border: "1.5px solid var(--ink)",
           display: "inline-block",
           marginTop: 8,
-          boxShadow: "3px 3px 0 var(--ink)",
+          boxShadow: "var(--shadow)",
         }}
       >
         <QRCodeSVG value={value} size={size} level="M" />

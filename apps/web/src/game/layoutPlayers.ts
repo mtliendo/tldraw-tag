@@ -225,7 +225,7 @@ export function layoutPlayers(
         rect = clampRect(rect, clampTo, edgePad);
         let score = Math.max(0, order.indexOf(slot.side)) * 18;
         for (const q of laid) {
-          score += overlapArea(rect, blobRect(q), CLEAR) * (q.id === p.id ? 8 : 5);
+          score += overlapArea(rect, blobRect(q), CLEAR) * (q.id === p.id ? 8 : 10);
           if (q.id === p.id) {
             const head = { x: q.x - ART_INSET.left, y: q.y - ART_INSET.top, w: ART_INSET.left + ART_INSET.right, h: ART_INSET.top - r };
             score += overlapArea(rect, head, 2) * 12;
@@ -238,7 +238,7 @@ export function layoutPlayers(
             w: q.labelW,
             h: q.labelH,
           };
-          score += overlapArea(rect, other, CLEAR) * 14;
+          score += overlapArea(rect, other, CLEAR) * 22;
         }
         for (const hole of avoid) {
           score += overlapArea(rect, hole, 10) * 28;
@@ -287,7 +287,7 @@ function labelBox(p: LaidOutPlayer): Rect {
 
 function separateLabels(taken: LaidOutPlayer[], blobs: LaidOutPlayer[], clampTo: Rect, avoid: Rect[] = []) {
   const ordered = [...taken].sort((a, b) => a.x - b.x || a.y - b.y);
-  for (let iter = 0; iter < 14; iter++) {
+  for (let iter = 0; iter < 18; iter++) {
     for (const p of ordered) {
       let rect = labelBox(p);
       for (const q of taken) {
@@ -298,14 +298,23 @@ function separateLabels(taken: LaidOutPlayer[], blobs: LaidOutPlayer[], clampTo:
         const dy = rect.y + rect.h / 2 - (other.y + other.h / 2);
         const sameRow = Math.abs(dy) < Math.max(rect.h, other.h);
         const dirX = dx === 0 ? (p.x >= q.x ? 1 : -1) : Math.sign(dx);
-        rect.x += dirX * (sameRow ? 10 : 6);
-        if (!sameRow) rect.y += (dy === 0 ? 1 : Math.sign(dy)) * 4;
+        rect.x += dirX * (sameRow ? 16 : 8);
+        if (!sameRow) rect.y += (dy === 0 ? 1 : Math.sign(dy)) * 6;
+        else if (iter > 8) rect.y += (p.y >= q.y ? 1 : -1) * 4;
       }
       for (const q of blobs) {
         const blob = { x: q.x - PLAYER_TOKEN / 2, y: q.y - PLAYER_TOKEN / 2, w: PLAYER_TOKEN, h: PLAYER_TOKEN };
         if (overlapArea(rect, blob, 2) === 0) continue;
-        rect.x += (rect.x + rect.w / 2 - q.x >= 0 ? 1 : -1) * 5;
-        rect.y += (rect.y + rect.h / 2 - q.y >= 0 ? 1 : -1) * 5;
+        const cx = rect.x + rect.w / 2;
+        const cy = rect.y + rect.h / 2;
+        if (iter < 10) {
+          rect.x += (cx - q.x >= 0 ? 1 : -1) * 8;
+          rect.y += (cy - q.y >= 0 ? 1 : -1) * 8;
+        } else if (Math.abs(cx - q.x) > Math.abs(cy - q.y)) {
+          rect.x = cx >= q.x ? blob.x + blob.w + 4 : blob.x - 4 - rect.w;
+        } else {
+          rect.y = cy >= q.y ? blob.y + blob.h + 4 : blob.y - 4 - rect.h;
+        }
       }
       for (const hole of avoid) {
         if (overlapArea(rect, hole, 4) === 0) continue;

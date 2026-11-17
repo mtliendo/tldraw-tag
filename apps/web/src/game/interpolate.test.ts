@@ -82,4 +82,19 @@ describe("interpolator art clamp", () => {
     const lana = sampled!.players[0];
     assert.ok(lana.y >= sampled!.zone.y + ART_INSET.top - 0.05);
   });
+
+  it("pushes a non-ghost player off a paver wall", () => {
+    const zone = { x: 0, y: 0, w: 1600, h: 900 };
+    const wall = { id: "w1", x: 700, y: 200, w: 140, h: 26 };
+    const state = clampState(
+      view({
+        zone,
+        walls: [wall],
+        players: [player("mia", 770, 213, { name: "Mia" })],
+      }),
+    );
+    const mia = state.players[0];
+    assert.ok(mia.y + 1 < wall.y || mia.y - 1 > wall.y + wall.h, `Mia y ${mia.y} vs wall ${wall.y}`);
+    assert.ok(mia.y <= wall.y - ART_INSET.bottom + 0.5 || mia.y >= wall.y + wall.h + ART_INSET.top - 0.5);
+  });
 });

@@ -109,7 +109,7 @@ export const POWER_MAX_ON_BOARD = 10;
 export const WALL_WIDTH = 140;
 export const WALL_THICKNESS = 26;
 export const WALL_LIFETIME = 5;
-export const WALL_PLACE_OFFSET = scaleWithPlayer(64);
+export const WALL_PLACE_OFFSET = 64;
 
 export const GHOST_DURATION = 2;
 export const SPEED_DURATION = 2;

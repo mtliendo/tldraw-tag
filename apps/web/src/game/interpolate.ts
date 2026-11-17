@@ -1,4 +1,4 @@
-import { INTERP_DELAY_MS, clampToZoneArt, lerp } from "@inkt/shared";
+import { INTERP_DELAY_MS, clampToZoneArt, lerp, lerpRect } from "@inkt/shared";
 import type { ViewPlayer, ViewState } from "./types";
 
 type Snap = { t: number; state: ViewState };
@@ -30,7 +30,8 @@ export class Interpolator {
 
 function mix(a: ViewState, b: ViewState, t: number): ViewState {
   const prev = new Map(a.players.map((p) => [p.id, p]));
-  const zone = b.zone;
+  const zone = lerpRect(a.zone, b.zone, t);
+  const targetZone = lerpRect(a.targetZone, b.targetZone, t);
   const players: ViewPlayer[] = b.players.map((p) => {
     const o = prev.get(p.id);
     if (!o) return { ...p, ...clampToZoneArt(p.x, p.y, zone) };
@@ -47,13 +48,15 @@ function mix(a: ViewState, b: ViewState, t: number): ViewState {
   });
   return clampState({
     ...b,
+    zone,
+    targetZone,
     shrinkIn: lerp(a.shrinkIn, b.shrinkIn, t),
     players,
     decoys,
   });
 }
 
-function clampState(state: ViewState): ViewState {
+export function clampState(state: ViewState): ViewState {
   const zone = state.zone;
   return {
     ...state,

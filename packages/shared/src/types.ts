@@ -12,6 +12,7 @@ export type LeaderboardRow = {
   id: string;
   name: string;
   avatar: string;
+  tint: number;
   score: number;
   isIt: boolean;
   isBot: boolean;
@@ -34,6 +35,7 @@ export type EnginePlayer = {
   sessionId: string;
   name: string;
   avatar: string;
+  tint: number;
   x: number;
   y: number;
   vx: number;
@@ -135,6 +137,7 @@ export type PublicPlayer = {
   sessionId: string;
   name: string;
   avatar: string;
+  tint: number;
   x: number;
   y: number;
   vx: number;

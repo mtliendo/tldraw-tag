@@ -1,6 +1,6 @@
 "use client";
 
-import { avatarTintIndex, formatTime } from "@inkt/shared";
+import { formatTime, playerTint } from "@inkt/shared";
 import type { ViewState } from "@/game/types";
 import { CritterThumb } from "@/components/Critter";
 import { shortPlayerName } from "@/game/layoutPlayers";
@@ -77,7 +77,7 @@ export function Leaderboard({
           <CritterThumb
             avatar={selfRow.avatar}
             size={28}
-            tint={avatarTintIndex(rows, selfRow.id, selfRow.avatar)}
+            tint={playerTint(selfRow, view.players)}
             isIt={selfRow.isIt}
           />
           <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -127,7 +127,7 @@ export function Leaderboard({
         }}
       >
         {rows.map((row, i) => {
-          const tint = avatarTintIndex(rows, row.id, row.avatar);
+          const tint = playerTint(row, view.players);
           return (
             <li
               key={row.id}

@@ -1,4 +1,4 @@
-import { PLAYER_LABEL_H, PLAYER_TOKEN } from "@inkt/shared";
+import { ART_INSET, PLAYER_LABEL_H, PLAYER_TOKEN } from "@inkt/shared";
 import type { ViewPlayer } from "./types";
 
 export type LabelSide = "below" | "above" | "left" | "right";
@@ -60,12 +60,9 @@ function overlapArea(a: Rect, b: Rect, pad = 0) {
   return x * y;
 }
 
-function slots(preferAbove: boolean, scale: number): Slot[] {
+function slots(order: LabelSide[], scale: number): Slot[] {
   const step = 16 * scale;
   const offs = [0, step, -step, 2 * step, -2 * step, 3 * step, -3 * step, 4.4 * step, -4.4 * step];
-  const order: LabelSide[] = preferAbove
-    ? ["above", "below", "right", "left"]
-    : ["below", "above", "right", "left"];
   const out: Slot[] = [];
   for (const side of order) {
     for (const o of offs) {
@@ -74,6 +71,38 @@ function slots(preferAbove: boolean, scale: number): Slot[] {
     }
   }
   return out;
+}
+
+/** Sides that keep the pill inside the zone when a player is against a wall. */
+export function interiorLabelSides(
+  p: { x: number; y: number; labelW: number },
+  zone: Zone,
+  lh: number,
+): LabelSide[] {
+  const nearTop = p.y - zone.y < ART_INSET.top + lh + 18;
+  const nearBottom = zone.y + zone.h - p.y < ART_INSET.bottom + lh + 18;
+  const nearLeft = p.x - zone.x < ART_INSET.left + p.labelW * 0.5 + 14;
+  const nearRight = zone.x + zone.w - p.x < ART_INSET.right + p.labelW * 0.5 + 14;
+  const forbidden = new Set<LabelSide>();
+  if (nearTop) forbidden.add("above");
+  if (nearBottom) forbidden.add("below");
+  if (nearLeft) forbidden.add("left");
+  if (nearRight) forbidden.add("right");
+  const preferred: LabelSide[] = [];
+  const push = (side: LabelSide) => {
+    if (!forbidden.has(side) && !preferred.includes(side)) preferred.push(side);
+  };
+  if (nearBottom) push("above");
+  if (nearTop) push("below");
+  if (nearLeft) push("right");
+  if (nearRight) push("left");
+  if (nearBottom || p.y + PLAYER_TOKEN / 2 + lh + 12 > zone.y + zone.h * 0.82) push("above");
+  else push("below");
+  push("above");
+  push("below");
+  push("right");
+  push("left");
+  return preferred.length ? preferred : ["below", "above", "right", "left"];
 }
 
 function pillRect(
@@ -112,7 +141,7 @@ function pushOut(rect: Rect, hole: Rect, pad = 6, box?: Rect): Rect {
   const cx = rect.x + rect.w / 2;
   const cy = rect.y + rect.h / 2;
   for (const o of options) {
-    const r = box ? clampRect(o, box, 4) : o;
+    const r = box ? clampRect(o, box, 8) : o;
     const dx = r.x + r.w / 2 - cx;
     const dy = r.y + r.h / 2 - cy;
     const score = overlapArea(r, hole, 0) * 4000 + dx * dx + dy * dy;
@@ -169,6 +198,12 @@ export function layoutPlayers(
     w: r * 2,
     h: r * 2,
   });
+  const artRect = (p: LaidOutPlayer): Rect => ({
+    x: p.x - ART_INSET.left,
+    y: p.y - ART_INSET.top,
+    w: ART_INSET.left + ART_INSET.right,
+    h: ART_INSET.top + ART_INSET.bottom,
+  });
 
   const youId = options?.selfId ?? selfId;
   const clampTo = options?.clamp ?? zone;
@@ -183,19 +218,20 @@ export function layoutPlayers(
   const ranked = [...laid].sort((a, b) => rank(a) - rank(b) || a.y - b.y || a.x - b.x);
   const taken: LaidOutPlayer[] = [];
   const forceShow = players.length <= ALWAYS_SHOW;
-  const candidates = (preferAbove: boolean) => slots(preferAbove, labelScale);
+  const edgePad = 8;
 
   for (const p of ranked) {
-    const preferAbove = p.y + r + lh + 12 > zone.y + zone.h * 0.82;
+    const order = interiorLabelSides(p, zone, lh);
     let best: { slot: Slot; rect: Rect; score: number } | null = null;
 
     for (const gap of gaps) {
-      for (const slot of candidates(preferAbove)) {
+      for (const slot of slots(order, labelScale)) {
         let rect = pillRect(p, slot.side, slot.ox, slot.oy, r, lh, gap);
-        rect = clampRect(rect, clampTo, 4);
+        rect = clampRect(rect, clampTo, edgePad);
         let score = 0;
         for (const q of laid) {
           score += overlapArea(rect, blobRect(q), CLEAR) * (q.id === p.id ? 8 : 5);
+          if (q.id === p.id) score += overlapArea(rect, artRect(q), 2) * 12;
         }
         for (const q of taken) {
           const other: Rect = {
@@ -204,11 +240,15 @@ export function layoutPlayers(
             w: q.labelW,
             h: q.labelH,
           };
-          score += overlapArea(rect, other, CLEAR) * 7;
+          score += overlapArea(rect, other, CLEAR) * 14;
         }
         for (const hole of avoid) {
           score += overlapArea(rect, hole, 10) * 28;
         }
+        if (rect.y < zone.y + edgePad) score += 900;
+        if (rect.y + rect.h > zone.y + zone.h - edgePad) score += 900;
+        if (rect.x < zone.x + edgePad) score += 500;
+        if (rect.x + rect.w > zone.x + zone.w - edgePad) score += 500;
         if (!best || score < best.score) best = { slot, rect, score };
         if (score === 0) break;
       }
@@ -223,7 +263,7 @@ export function layoutPlayers(
     const { slot } = best;
     let rect = best.rect;
     for (const hole of avoid) rect = pushOut(rect, hole, 10, clampTo);
-    rect = clampRect(rect, clampTo, 4);
+    rect = clampRect(rect, clampTo, edgePad);
     p.labelSide = slot.side;
     p.labelAbove = slot.side === "above";
     p.labelX = rect.x + rect.w / 2 - p.x;
@@ -248,16 +288,20 @@ function labelBox(p: LaidOutPlayer): Rect {
 }
 
 function separateLabels(taken: LaidOutPlayer[], blobs: LaidOutPlayer[], clampTo: Rect, avoid: Rect[] = []) {
-  for (let iter = 0; iter < 8; iter++) {
-    for (const p of taken) {
+  const ordered = [...taken].sort((a, b) => a.x - b.x || a.y - b.y);
+  for (let iter = 0; iter < 14; iter++) {
+    for (const p of ordered) {
       let rect = labelBox(p);
       for (const q of taken) {
         if (q.id === p.id) continue;
-        if (overlapArea(rect, labelBox(q), 2) === 0) continue;
-        const dx = p.x + p.labelX - (q.x + q.labelX);
-        const dy = p.y + p.labelY - (q.y + q.labelY);
-        rect.x += (dx === 0 ? 1 : Math.sign(dx)) * 4;
-        rect.y += (dy === 0 ? 1 : Math.sign(dy)) * 3;
+        const other = labelBox(q);
+        if (overlapArea(rect, other, 2) === 0) continue;
+        const dx = rect.x + rect.w / 2 - (other.x + other.w / 2);
+        const dy = rect.y + rect.h / 2 - (other.y + other.h / 2);
+        const sameRow = Math.abs(dy) < Math.max(rect.h, other.h);
+        const dirX = dx === 0 ? (p.x >= q.x ? 1 : -1) : Math.sign(dx);
+        rect.x += dirX * (sameRow ? 10 : 6);
+        if (!sameRow) rect.y += (dy === 0 ? 1 : Math.sign(dy)) * 4;
       }
       for (const q of blobs) {
         const blob = { x: q.x - PLAYER_TOKEN / 2, y: q.y - PLAYER_TOKEN / 2, w: PLAYER_TOKEN, h: PLAYER_TOKEN };
@@ -269,7 +313,7 @@ function separateLabels(taken: LaidOutPlayer[], blobs: LaidOutPlayer[], clampTo:
         if (overlapArea(rect, hole, 4) === 0) continue;
         rect = pushOut(rect, hole, 10, clampTo);
       }
-      rect = clampRect(rect, clampTo, 4);
+      rect = clampRect(rect, clampTo, 8);
       p.labelX = rect.x + rect.w / 2 - p.x;
       p.labelY = rect.y + rect.h / 2 - p.y;
       p.labelLeader =

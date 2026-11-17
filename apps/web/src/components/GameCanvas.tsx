@@ -10,10 +10,11 @@ import {
   PLAYER_TOKEN,
   POWER_TOKEN,
   ZONE_WARN_SECONDS,
+  clampToZoneArt,
+  playerTint,
 } from "@inkt/shared";
 import { INKT_SHAPES } from "@/shapes/inkt-shapes";
 import { liveLabelScale, layoutPlayers } from "@/game/layoutPlayers";
-import { avatarTintIndex } from "@inkt/shared";
 import type { ViewState } from "@/game/types";
 import { Confetti } from "@/components/Confetti";
 
@@ -204,7 +205,12 @@ export function GameCanvas({
           props: { w: 56, h: 56, kind: pow.kind },
         });
       }
-      for (const decoy of state.decoys) {
+      const now = Date.now();
+      const ended = state.phase === "ended";
+      const zone = state.zone;
+      const players = state.players.map((p) => ({ ...p, ...clampToZoneArt(p.x, p.y, zone) }));
+      const decoys = state.decoys.map((d) => ({ ...d, ...clampToZoneArt(d.x, d.y, zone) }));
+      for (const decoy of decoys) {
         decoyIds.push(
           make(`decoy:${decoy.id}`, {
             type: "inkt-decoy",
@@ -214,14 +220,12 @@ export function GameCanvas({
           }),
         );
       }
-      const now = Date.now();
-      const ended = state.phase === "ended";
-      const inset = ended ? 10 : 0;
+      const inset = ended ? 10 : 8;
       const clampBox = {
-        x: state.zone.x + inset,
-        y: state.zone.y + inset,
-        w: Math.max(48, state.zone.w - inset * 2),
-        h: Math.max(48, state.zone.h - inset * 2),
+        x: zone.x + inset,
+        y: zone.y + inset,
+        w: Math.max(48, zone.w - inset * 2),
+        h: Math.max(48, zone.h - inset * 2),
       };
       const hole = ended
         ? [
@@ -239,7 +243,7 @@ export function GameCanvas({
         w: wall.w,
         h: wall.h,
       }));
-      const laid = layoutPlayers(state.players, state.zone, scale, selfId, {
+      const laid = layoutPlayers(players, zone, scale, selfId, {
         clamp: clampBox,
         avoid: [...hole, ...wallHoles],
       });
@@ -289,7 +293,7 @@ export function GameCanvas({
               labelScale: scale,
               vx: p.vx,
               vy: p.vy,
-              tint: avatarTintIndex(state.players, p.id, p.avatar),
+              tint: playerTint(p, players),
             },
           }),
         );
@@ -303,7 +307,7 @@ export function GameCanvas({
       if (puts.length) editor.updateShapes(puts);
       if (decoyIds.length) editor.bringToFront(decoyIds);
       if (playerIds.length) editor.bringToFront(playerIds);
-      if (followPlayerRef.current) fit(editor, state);
+      if (followPlayerRef.current) fit(editor, { ...state, players, decoys });
     },
     [selfId, hoverId, fit],
   );

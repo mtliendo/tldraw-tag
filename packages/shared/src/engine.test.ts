@@ -515,6 +515,32 @@ describe("TagEngine loop", () => {
     assert.equal(board[board.length - 1].name, "Toner");
   });
 
+  it("stamps a stable tint on avatar repeats and publishes it on the leaderboard", () => {
+    const engine = new TagEngine({ roundLength: 20, rand: rng(19) });
+    for (let i = 0; i < 14; i++) engine.addPlayer({ name: `P${i}`, avatar: "bolt" });
+    const seated = Object.values(engine.state.players);
+    const counts = new Map<string, number>();
+    for (const p of seated) {
+      const n = counts.get(p.avatar) ?? 0;
+      assert.equal(p.tint, n, `${p.name} ${p.avatar} tint ${p.tint} vs join index ${n}`);
+      counts.set(p.avatar, n + 1);
+    }
+    assert.ok([...counts.values()].some((n) => n > 1), "expected a repeated critter");
+    engine.start();
+    engine.state.timeLeft = 0;
+    engine.tick(0.05);
+    const pub = engine.toPublic();
+    for (const row of pub.leaderboard) {
+      const p = engine.state.players[row.id];
+      assert.equal(row.tint, p.tint);
+      assert.equal(pub.players.find((x) => x.id === row.id)?.tint, p.tint);
+    }
+    const repeat = seated.find((p) => p.tint > 0);
+    assert.ok(repeat);
+    const boardIdx = pub.leaderboard.findIndex((row) => row.id === repeat!.id);
+    assert.ok(boardIdx >= 0);
+  });
+
   it("breaks equal IT time with fewer tags first", () => {
     const engine = new TagEngine({ roundLength: 20, shrinkInterval: 30, rand: rng(8) });
     engine.addPlayer({ id: "a", name: "Ada", avatar: "bolt" });

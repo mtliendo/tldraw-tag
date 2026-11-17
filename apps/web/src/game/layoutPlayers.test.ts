@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { minZoneSize } from "@inkt/shared";
+import { ART_INSET, minZoneSize } from "@inkt/shared";
 import { crowdLabelScale, layoutPlayers, liveLabelScale, shortPlayerName } from "./layoutPlayers";
 import type { ViewPlayer } from "./types";
 
@@ -10,6 +10,7 @@ function player(i: number, x: number, y: number, extra: Partial<ViewPlayer> = {}
     sessionId: `s${i}`,
     name: i === 0 ? "Stencil" : `Bot${i}`,
     avatar: "bolt",
+    tint: 0,
     x,
     y,
     vx: 0,
@@ -132,6 +133,83 @@ describe("layoutPlayers", () => {
     for (const p of laid) {
       assert.ok(p.labelW >= 104, `${p.name} pill too narrow (${p.labelW.toFixed(1)})`);
     }
+  });
+
+  it("does not stack name pills in a late shrinking zone", () => {
+    const z = { x: 200, y: 120, w: 1000, h: 562 };
+    const players: ViewPlayer[] = [];
+    const cols = 5;
+    for (let i = 0; i < 20; i++) {
+      const c = i % cols;
+      const r = Math.floor(i / cols);
+      players.push(
+        player(
+          i,
+          z.x + ART_INSET.left + 20 + (c + 0.5) * ((z.w - ART_INSET.left - ART_INSET.right - 40) / cols),
+          z.y + ART_INSET.top + 10 + (r + 0.5) * ((z.h - ART_INSET.top - ART_INSET.bottom - 20) / 4),
+          { name: i === 0 ? "Marker" : `P${i}`, isIt: i === 0 },
+        ),
+      );
+    }
+    const laid = layoutPlayers(players, z, liveLabelScale(20, 1.5, z));
+    const shown = laid.filter((p) => p.showLabel);
+    assert.equal(shown.length, 20);
+    const hits = (a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) =>
+      a.x < b.x + b.w - 2 && a.x + a.w > b.x + 2 && a.y < b.y + b.h - 2 && a.y + a.h > b.y + 2;
+    for (let i = 0; i < shown.length; i++) {
+      const a = {
+        x: shown[i].x + shown[i].labelX - shown[i].labelW / 2,
+        y: shown[i].y + shown[i].labelY - shown[i].labelH / 2,
+        w: shown[i].labelW,
+        h: shown[i].labelH,
+      };
+      assert.ok(a.y >= z.y + 2, `${shown[i].name} above the zone`);
+      assert.ok(a.y + a.h <= z.y + z.h - 2, `${shown[i].name} below the zone`);
+      for (let j = i + 1; j < shown.length; j++) {
+        const b = {
+          x: shown[j].x + shown[j].labelX - shown[j].labelW / 2,
+          y: shown[j].y + shown[j].labelY - shown[j].labelH / 2,
+          w: shown[j].labelW,
+          h: shown[j].labelH,
+        };
+        assert.equal(hits(a, b), false, `${shown[i].name} stacked on ${shown[j].name}`);
+      }
+    }
+  });
+
+  it("flips a top-wall name below the critter, inside the zone", () => {
+    const z = { x: 120, y: 80, w: 900, h: 560 };
+    const laid = layoutPlayers(
+      [player(1, 500, z.y + ART_INSET.top, { name: "Lana", isIt: false })],
+      z,
+      1,
+    );
+    const lana = laid[0];
+    assert.equal(lana.labelSide, "below");
+    const top = lana.y + lana.labelY - lana.labelH / 2;
+    const bottom = lana.y + lana.labelY + lana.labelH / 2;
+    assert.ok(top >= z.y + 2, `Lana pill top ${top.toFixed(1)} vs wall ${z.y}`);
+    assert.ok(bottom <= z.y + z.h - 2, `Lana pill bottom ${bottom.toFixed(1)}`);
+  });
+
+  it("flips a bottom-wall IT pill above even when the pack is crowded inside", () => {
+    const z = { x: 0, y: 0, w: 900, h: 560 };
+    const players: ViewPlayer[] = [
+      player(0, 450, z.y + z.h - ART_INSET.bottom, { name: "Marker", isIt: true }),
+    ];
+    for (let i = 1; i < 12; i++) {
+      players.push(
+        player(i, 300 + (i % 4) * 80, 220 + Math.floor(i / 4) * 70, { name: `P${i}`, isIt: false }),
+      );
+    }
+    const laid = layoutPlayers(players, z, crowdLabelScale(12, 1.5));
+    const marker = laid.find((p) => p.name === "Marker")!;
+    assert.ok(marker.showLabel, "IT Marker should keep a label");
+    assert.notEqual(marker.labelSide, "below");
+    const top = marker.y + marker.labelY - marker.labelH / 2;
+    const bottom = marker.y + marker.labelY + marker.labelH / 2;
+    assert.ok(top >= z.y + 2, `IT pill top ${top.toFixed(1)}`);
+    assert.ok(bottom <= z.y + z.h - 2, `IT pill sat on the wall (${bottom.toFixed(1)} vs ${z.h})`);
   });
 
   it("keeps labels off paver walls", () => {

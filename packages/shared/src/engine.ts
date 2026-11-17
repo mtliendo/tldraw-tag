@@ -37,7 +37,7 @@ import {
   ZONE_SHRINK_DURATION,
   minZoneSize,
 } from "./constants";
-import { AVATARS } from "./avatars";
+import { AVATARS, resolveAvatarId } from "./avatars";
 import { pickWeightedPower, POWER_UPS, type PowerId } from "./powerups";
 import {
   clamp,
@@ -168,11 +168,13 @@ export class TagEngine {
     const id = opts.id ?? uid("p");
     const guess = this.randomInZone(PLAYER_RADIUS + 8);
     const spawn = this.clearOfPlayers(guess.x, guess.y, PLAYER_SEPARATION);
+    const avatar = this.nextAvatar();
     const player: EnginePlayer = {
       id,
       sessionId: opts.sessionId ?? "",
       name: sanitizeName(opts.name),
-      avatar: this.nextAvatar(),
+      avatar,
+      tint: this.tintFor(avatar),
       x: spawn.x,
       y: spawn.y,
       vx: 0,
@@ -246,6 +248,12 @@ export class TagEngine {
     const id = this.avatarBag.pop()!;
     this.lastDealtAvatar = id;
     return id;
+  }
+
+  /** Index among already-seated copies of this critter. Stays put if others leave. */
+  private tintFor(avatar: string): number {
+    const key = resolveAvatarId(avatar);
+    return Object.values(this.state.players).filter((p) => resolveAvatarId(p.avatar) === key).length;
   }
 
   setInput(id: string, input: Partial<InputState>) {
@@ -497,6 +505,7 @@ export class TagEngine {
         sessionId: p.sessionId,
         name: p.name,
         avatar: p.avatar,
+        tint: p.tint ?? 0,
         x: p.x,
         y: p.y,
         vx: p.vx,
@@ -1141,6 +1150,7 @@ export class TagEngine {
           id: p.id,
           name: p.name,
           avatar: p.avatar,
+          tint: p.tint ?? 0,
           score: p.score,
           isIt: p.id === this.state.itId,
           isBot: p.isBot,

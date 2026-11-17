@@ -246,6 +246,7 @@ function applyPublic(state: GameState, pub: PublicState) {
     s.sessionId = row.sessionId;
     s.name = row.name;
     s.avatar = row.avatar;
+    s.tint = row.tint ?? 0;
     s.x = row.x;
     s.y = row.y;
     s.vx = row.vx;
@@ -311,6 +312,7 @@ function applyPublic(state: GameState, pub: PublicState) {
     s.id = row.id;
     s.name = row.name;
     s.avatar = row.avatar;
+    s.tint = row.tint ?? 0;
     s.score = row.score;
     s.isIt = row.isIt;
     s.isBot = row.isBot;

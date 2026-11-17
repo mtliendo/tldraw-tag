@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { POWER_UPS, avatarTintIndex, formatTime, phaseStatus, type PowerId } from "@inkt/shared";
+import { POWER_UPS, formatTime, phaseStatus, playerTint, type PowerId } from "@inkt/shared";
 import { useGameRoom } from "@/hooks/useGameRoom";
 import { GameCanvas } from "@/components/GameCanvas";
 import { QrPanel } from "@/components/QrPanel";
@@ -129,7 +129,7 @@ export default function ScreenPage() {
                   avatar={it.avatar}
                   size={56}
                   isIt
-                  tint={avatarTintIndex(view.players, it.id, it.avatar)}
+                  tint={playerTint(it, view.players)}
                 />
               )}
               <div>

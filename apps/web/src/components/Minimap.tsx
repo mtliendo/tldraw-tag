@@ -1,4 +1,4 @@
-import { PLAYER_TOKEN, avatarById } from "@inkt/shared";
+import { PLAYER_TOKEN, avatarTintColor, playerTint } from "@inkt/shared";
 import type { ViewState } from "@/game/types";
 
 export function Minimap({
@@ -48,7 +48,9 @@ export function Minimap({
             cx={sx(p.x)}
             cy={sy(p.y)}
             r={p.id === selfId || p.isIt ? r + 1 : r}
-            fill={p.isIt ? "#E8542F" : p.id === selfId ? "#4465E9" : avatarById(p.avatar).color}
+            fill={
+              p.isIt ? "#E8542F" : p.id === selfId ? "#4465E9" : avatarTintColor(p.avatar, playerTint(p, view.players))
+            }
             opacity={p.id === selfId || p.isIt ? 1 : 0.5}
           />
         ))}

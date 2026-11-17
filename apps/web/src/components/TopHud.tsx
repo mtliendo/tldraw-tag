@@ -1,6 +1,6 @@
 "use client";
 
-import { avatarTintIndex, formatTime, phaseStatus, POWER_UPS, type PowerId } from "@inkt/shared";
+import { formatTime, phaseStatus, playerTint, POWER_UPS, type PowerId } from "@inkt/shared";
 import type { ViewState } from "@/game/types";
 import { CritterThumb } from "@/components/Critter";
 
@@ -44,7 +44,7 @@ export function TopHud({
               avatar={it.avatar}
               size={slim ? 22 : 28}
               isIt
-              tint={avatarTintIndex(view.players, it.id, it.avatar)}
+              tint={playerTint(it, view.players)}
             />
           )}
           <span style={{ minWidth: 0 }}>

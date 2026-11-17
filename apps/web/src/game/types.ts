@@ -5,6 +5,7 @@ export type ViewPlayer = {
   sessionId: string;
   name: string;
   avatar: string;
+  tint: number;
   x: number;
   y: number;
   vx: number;
@@ -41,6 +42,7 @@ export type ViewState = {
     id: string;
     name: string;
     avatar: string;
+    tint: number;
     score: number;
     isIt: boolean;
     isBot: boolean;

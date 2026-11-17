@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { POWER_UPS, assignedCritterLine, avatarTintIndex, type PowerId } from "@inkt/shared";
+import { POWER_UPS, assignedCritterLine, playerTint, type PowerId } from "@inkt/shared";
 import { CritterThumb } from "@/components/Critter";
 import { useGameRoom } from "@/hooks/useGameRoom";
 import { useKeyboard } from "@/hooks/useKeyboard";
@@ -136,7 +136,7 @@ export default function PlayPage() {
         compact
         overlay={landscape}
         avatar={me?.avatar}
-        tint={me ? avatarTintIndex(view.players, me.id, me.avatar) : 0}
+        tint={me ? playerTint(me, view.players) : 0}
       />
       <PowerButton
         powerId={me?.powerId ?? ""}
@@ -214,7 +214,7 @@ export default function PlayPage() {
                     <CritterThumb
                       avatar={me.avatar}
                       size={landscape ? 56 : 96}
-                      tint={avatarTintIndex(view.players, me.id, me.avatar)}
+                      tint={playerTint(me, view.players)}
                     />
                   </div>
                   <h2 style={{ fontSize: landscape ? 22 : 28, margin: 0 }}>{assignedCritterLine(me.avatar)}</h2>

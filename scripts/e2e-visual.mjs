@@ -41,6 +41,9 @@ await assertBoard(screen, "e2e-projector");
 await assertBoard(joinPhone, "e2e-mobile", { follow: true });
 await admin.waitForTimeout(6500);
 await assertBoard(screen, "e2e-projector-shrink");
+await admin.getByRole("button", { name: /pin art/i }).click();
+await admin.waitForTimeout(700);
+await assertBoard(screen, "e2e-projector-pin");
 
 await admin.waitForSelector("text=wins!", { timeout: 30000 });
 await screen.getByRole("button", { name: /play again/i }).click();

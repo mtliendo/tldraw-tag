@@ -367,6 +367,8 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
                 width: ART_INSET.left + ART_INSET.right,
                 height: ART_INSET.top + ART_INSET.bottom,
                 overflow: "hidden",
+                contain: "paint",
+                isolation: "isolate",
                 pointerEvents: "none",
               }}
             >
@@ -632,6 +634,8 @@ export class DecoyShapeUtil extends ShapeUtil<DecoyShape> {
               width: ART_INSET.left + ART_INSET.right,
               height: ART_INSET.top + ART_INSET.bottom,
               overflow: "hidden",
+              contain: "paint",
+              isolation: "isolate",
               pointerEvents: "none",
             }}
           >

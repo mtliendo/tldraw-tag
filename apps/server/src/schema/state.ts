@@ -5,6 +5,7 @@ export class PlayerState extends Schema {
   @type("string") sessionId = "";
   @type("string") name = "";
   @type("string") avatar = "";
+  @type("number") tint = 0;
   @type("number") x = 0;
   @type("number") y = 0;
   @type("number") vx = 0;
@@ -56,6 +57,7 @@ export class ScoreRow extends Schema {
   @type("string") id = "";
   @type("string") name = "";
   @type("string") avatar = "";
+  @type("number") tint = 0;
   @type("number") score = 0;
   @type("boolean") isIt = false;
   @type("boolean") isBot = false;

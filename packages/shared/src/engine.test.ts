@@ -637,6 +637,26 @@ describe("TagEngine loop", () => {
     const min = minZoneSize(4);
     assert.ok(Math.abs(tiny.state.zone.w - min.w) < 1);
     assertPinned(tiny, "min zone");
+
+    const crowd = new TagEngine({ roundLength: 40, shrinkInterval: 40, rand: rng(20) });
+    for (let i = 0; i < 20; i++) crowd.addPlayer({ name: `P${i}`, avatar: "bolt", isBot: i > 0 });
+    crowd.start();
+    crowd.pinArt({ minZone: true });
+    crowd.tick(0.05);
+    const crowdMin = minZoneSize(20);
+    assert.ok(Math.abs(crowd.state.zone.w - crowdMin.w) < 1);
+    const packed = Object.values(crowd.state.players);
+    for (const p of packed) {
+      assert.ok(artInsideZone(p.x, p.y, crowd.state.zone), `${p.name} art left the 20-player min zone`);
+    }
+    for (let a = 0; a < packed.length; a++) {
+      for (let b = a + 1; b < packed.length; b++) {
+        assert.ok(
+          dist(packed[a].x, packed[a].y, packed[b].x, packed[b].y) >= PLAYER_SEPARATION - 1.5,
+          `${packed[a].name} overlapped ${packed[b].name} in the 20-player min zone`,
+        );
+      }
+    }
   });
 
   it("separates lobby spawns so critters do not overlap", () => {

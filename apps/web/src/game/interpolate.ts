@@ -1,4 +1,4 @@
-import { INTERP_DELAY_MS, clampToZoneArt, lerp, lerpRect } from "@inkt/shared";
+import { ART_INSET, INTERP_DELAY_MS, clampToZoneArt, lerp, lerpRect, separateAabbFromAabb } from "@inkt/shared";
 import type { ViewPlayer, ViewState } from "./types";
 
 type Snap = { t: number; state: ViewState };
@@ -34,17 +34,17 @@ function mix(a: ViewState, b: ViewState, t: number): ViewState {
   const targetZone = lerpRect(a.targetZone, b.targetZone, t);
   const players: ViewPlayer[] = b.players.map((p) => {
     const o = prev.get(p.id);
-    if (!o) return { ...p, ...clampToZoneArt(p.x, p.y, zone) };
+    if (!o) return { ...p, ...clampBody(p.x, p.y, zone, b.walls, p.ghost) };
     return {
       ...p,
-      ...clampToZoneArt(lerp(o.x, p.x, t), lerp(o.y, p.y, t), zone),
+      ...clampBody(lerp(o.x, p.x, t), lerp(o.y, p.y, t), zone, b.walls, p.ghost),
     };
   });
   const decoyPrev = new Map(a.decoys.map((d) => [d.id, d]));
   const decoys = b.decoys.map((d) => {
     const o = decoyPrev.get(d.id);
-    if (!o) return { ...d, ...clampToZoneArt(d.x, d.y, zone) };
-    return { ...d, ...clampToZoneArt(lerp(o.x, d.x, t), lerp(o.y, d.y, t), zone) };
+    if (!o) return { ...d, ...clampBody(d.x, d.y, zone, b.walls) };
+    return { ...d, ...clampBody(lerp(o.x, d.x, t), lerp(o.y, d.y, t), zone, b.walls) };
   });
   return clampState({
     ...b,
@@ -56,11 +56,29 @@ function mix(a: ViewState, b: ViewState, t: number): ViewState {
   });
 }
 
+function clampBody(
+  x: number,
+  y: number,
+  zone: ViewState["zone"],
+  walls: ViewState["walls"],
+  ghost = false,
+) {
+  let next = clampToZoneArt(x, y, zone);
+  if (!ghost) {
+    for (const wall of walls) {
+      next = separateAabbFromAabb(next.x, next.y, ART_INSET, wall);
+    }
+    next = clampToZoneArt(next.x, next.y, zone);
+  }
+  return next;
+}
+
 export function clampState(state: ViewState): ViewState {
   const zone = state.zone;
+  const walls = state.walls;
   return {
     ...state,
-    players: state.players.map((p) => ({ ...p, ...clampToZoneArt(p.x, p.y, zone) })),
-    decoys: state.decoys.map((d) => ({ ...d, ...clampToZoneArt(d.x, d.y, zone) })),
+    players: state.players.map((p) => ({ ...p, ...clampBody(p.x, p.y, zone, walls, p.ghost) })),
+    decoys: state.decoys.map((d) => ({ ...d, ...clampBody(d.x, d.y, zone, walls) })),
   };
 }

@@ -8,7 +8,9 @@ import {
   ARENA_W,
   MOBILE_BLOB_PX,
   PLAYER_TOKEN,
+  POWER_PULSE,
   POWER_TOKEN,
+  RING_PAD,
   ZONE_WARN_SECONDS,
   clampToZoneArt,
   playerTint,
@@ -192,9 +194,9 @@ export function GameCanvas({
       for (const pulse of state.pulses) {
         make(`pulse:${pulse.id}`, {
           type: "inkt-pulse",
-          x: pulse.x - 32,
-          y: pulse.y - 32,
-          props: { w: 64, h: 64, kind: pulse.kind, progress: pulse.progress },
+          x: pulse.x - POWER_PULSE / 2,
+          y: pulse.y - POWER_PULSE / 2,
+          props: { w: POWER_PULSE, h: POWER_PULSE, kind: pulse.kind, progress: pulse.progress },
         });
       }
       for (const pow of state.powerUps) {
@@ -202,7 +204,7 @@ export function GameCanvas({
           type: "inkt-power",
           x: pow.x - POWER_TOKEN / 2,
           y: pow.y - POWER_TOKEN / 2,
-          props: { w: 56, h: 56, kind: pow.kind },
+          props: { w: POWER_TOKEN, h: POWER_TOKEN, kind: pow.kind },
         });
       }
       const now = Date.now();
@@ -216,7 +218,7 @@ export function GameCanvas({
             type: "inkt-decoy",
             x: decoy.x - TOKEN_R,
             y: decoy.y - TOKEN_R,
-            props: { w: 72, h: 72, name: decoy.name, avatar: decoy.avatar },
+            props: { w: PLAYER_TOKEN, h: PLAYER_TOKEN, name: decoy.name, avatar: decoy.avatar },
           }),
         );
       }
@@ -267,8 +269,8 @@ export function GameCanvas({
             x: p.x - TOKEN_R,
             y: p.y - TOKEN_R,
             props: {
-              w: 72,
-              h: 72,
+              w: PLAYER_TOKEN,
+              h: PLAYER_TOKEN,
               name: p.name,
               avatar: p.avatar,
               isIt: p.isIt,
@@ -349,7 +351,10 @@ export function GameCanvas({
     <div
       ref={wrapRef}
       className={interactive ? "board-wrap interactive" : "board-wrap"}
-      style={{ ["--inkt-label-scale" as string]: String(liveLabelScale(view.players.length, labelScale, view.zone)) }}
+      style={{
+        ["--inkt-label-scale" as string]: String(liveLabelScale(view.players.length, labelScale, view.zone)),
+        ["--inkt-ring" as string]: `${RING_PAD}px`,
+      }}
       onPointerOver={(e) => {
         if (!interactive) return;
         const el = (e.target as HTMLElement).closest("[data-player-id]");

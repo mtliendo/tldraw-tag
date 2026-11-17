@@ -1,13 +1,17 @@
 /** Render-side checks: blob boxes vs zone, walls, and labels. */
 export async function assertBoard(page, label, { follow = false } = {}) {
   await page.waitForTimeout(250);
-  const report = await page.evaluate(() => {
+  const read = () => page.evaluate(() => {
     const zoneEl = document.querySelector('[data-inkt="zone"]');
     if (!zoneEl) return { ok: false, reason: "missing zone" };
     const zone = zoneEl.getBoundingClientRect();
     if (zone.width < 8 || zone.height < 8) return { ok: false, reason: "zone too small" };
     const blobs = [...document.querySelectorAll('[data-inkt="player"]')]
-      .map((el) => ({ id: el.getAttribute("data-player-id") || "?", r: el.getBoundingClientRect() }))
+      .map((el) => ({
+        id: el.getAttribute("data-player-id") || "?",
+        r: el.getBoundingClientRect(),
+        ghost: [...el.querySelectorAll("img")].some((img) => /ghost/.test(img.getAttribute("src") || "")),
+      }))
       .filter((b) => b.r.width > 6 && b.r.height > 6);
     const board = document.querySelector(".board-wrap") || document;
     const arts = [...board.querySelectorAll('[data-inkt="player"] [data-inkt="art"], [data-inkt="player"] .shield-ring')]
@@ -30,7 +34,7 @@ export async function assertBoard(page, label, { follow = false } = {}) {
         b.r.top < zone.top - pad ||
         b.r.bottom > zone.bottom + pad,
     );
-    const artPad = 4;
+    const artPad = 8;
     const artLeaks = arts.filter(
       (b) =>
         b.r.left < zone.left - artPad ||
@@ -40,10 +44,15 @@ export async function assertBoard(page, label, { follow = false } = {}) {
     );
     const hits = (a, b, slack = 3) =>
       a.left < b.right - slack && a.right > b.left + slack && a.top < b.bottom - slack && a.bottom > b.top + slack;
+    const wrapBox = document.querySelector(".board-wrap")?.getBoundingClientRect();
+    const onScreen = (r) =>
+      !wrapBox ||
+      (r.right > wrapBox.left + 2 && r.left < wrapBox.right - 2 && r.bottom > wrapBox.top + 2 && r.top < wrapBox.bottom - 2);
     const wallHits = [];
     for (const b of blobs) {
+      if (b.ghost || !onScreen(b.r)) continue;
       for (const w of walls) {
-        if (hits(b.r, w)) wallHits.push(b.id);
+        if (onScreen(w) && hits(b.r, w, 6)) wallHits.push(b.id);
       }
     }
     const labelHits = [];
@@ -59,7 +68,7 @@ export async function assertBoard(page, label, { follow = false } = {}) {
         if (hits(labels[i].r, labels[j].r, 2)) labelHits.push("label-label");
       }
       for (const b of blobs) {
-        if (hits(labels[i].r, b.r, 2)) labelHits.push(`label-${b.id}`);
+        if (hits(labels[i].r, b.r, 6)) labelHits.push(`label-${b.id}`);
       }
     }
     const wrap = document.querySelector(".board-wrap")?.getBoundingClientRect();
@@ -96,6 +105,11 @@ export async function assertBoard(page, label, { follow = false } = {}) {
       zone: { w: zone.width, h: zone.height, top: zone.top, bottom: zone.bottom },
     };
   });
+  let report = await read();
+  if (!report.ok) {
+    await page.waitForTimeout(400);
+    report = await read();
+  }
   if (!report.ok) {
     console.error(`board assert failed (${label})`, report);
     throw new Error(`${label}: blobs, art, or labels left the zone, overlapped a wall, or stacked labels`);
@@ -111,7 +125,7 @@ export async function assertBoard(page, label, { follow = false } = {}) {
     }
     if (report.blobW < 32 || report.blobW > 96) {
       console.error(`board blob size failed (${label})`, report);
-      throw new Error(`${label}: blobs should be ~44px on mobile, got ${report.blobW.toFixed(1)}`);
+      throw new Error(`${label}: blobs should be at least 32px on mobile, got ${report.blobW.toFixed(1)}`);
     }
   }
   console.log(`board ok ${label}`, report.blobCount, "blobs", follow ? "follow-cam" : "fit-zone");

@@ -9,7 +9,21 @@ import {
   type RecordProps,
   type TLShape,
 } from "tldraw";
-import { ART_INSET, POWER_UPS, STROKE, type PowerId } from "@inkt/shared";
+import {
+  ART_INSET,
+  PLAYER_LABEL_H,
+  PLAYER_RADIUS,
+  PLAYER_TOKEN,
+  POWER_GEM,
+  POWER_PULSE,
+  POWER_RADIUS,
+  POWER_TOKEN,
+  POWER_UPS,
+  RING_PAD,
+  STROKE,
+  scaleWithPlayer,
+  type PowerId,
+} from "@inkt/shared";
 import { Critter } from "@/components/Critter";
 import { PowerGlyph } from "@/components/PowerGlyph";
 import { shortPlayerName } from "@/game/layoutPlayers";
@@ -298,11 +312,11 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
       charges: 0,
       self: false,
       labelX: 0,
-      labelY: 48,
+      labelY: PLAYER_RADIUS + scaleWithPlayer(12),
       labelAbove: false,
       labelSide: "below",
       labelLeader: false,
-      labelW: 72,
+      labelW: PLAYER_TOKEN,
       labelStack: 0,
       squash: false,
       showLabel: true,
@@ -315,14 +329,14 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
     };
   }
   getGeometry(shape: PlayerShape) {
-    return new Rectangle2d({ width: 72, height: 72, isFilled: true });
+    return new Rectangle2d({ width: PLAYER_TOKEN, height: PLAYER_TOKEN, isFilled: true });
   }
   component(shape: PlayerShape) {
     const held = POWER_UPS[shape.props.powerId as PowerId];
-    const token = 72;
+    const token = PLAYER_TOKEN;
     const scale = shape.props.labelScale;
-    const labelH = 26 * scale + 2;
-    const labelW = shape.props.labelW || 72 * scale;
+    const labelH = PLAYER_LABEL_H * scale + 2;
+    const labelW = shape.props.labelW || PLAYER_TOKEN * scale;
     const cx = token / 2;
     const cy = token / 2;
     const lx = cx + shape.props.labelX;
@@ -333,7 +347,7 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
     const ay =
       side === "above" ? ly + labelH / 2 : side === "below" ? ly - labelH / 2 : ly;
     const ang = Math.atan2(ay - cy, ax - cx);
-    const rim = 36;
+    const rim = PLAYER_RADIUS;
     const sx = cx + Math.cos(ang) * rim;
     return (
       <HTMLContainer>
@@ -385,7 +399,7 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
               <span
                 style={{
                   position: "absolute",
-                  inset: -8,
+                  inset: -RING_PAD,
                   borderRadius: "50%",
                   border: "2.5px solid #4465E9",
                   pointerEvents: "none",
@@ -412,8 +426,8 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
                   position: "absolute",
                   right: -4,
                   bottom: -4,
-                  width: 22,
-                  height: 22,
+                  width: scaleWithPlayer(22),
+                  height: scaleWithPlayer(22),
                   borderRadius: 7,
                   background: held.color,
                   border: `${STROKE}px solid #1D1D1F`,
@@ -422,7 +436,7 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
                   zIndex: 2,
                 }}
               >
-                <PowerGlyph icon={held.icon} color={held.ink} size={12} />
+                <PowerGlyph icon={held.icon} color={held.ink} size={scaleWithPlayer(12)} />
               </div>
             )}
               </div>
@@ -497,10 +511,10 @@ export class PowerShapeUtil extends ShapeUtil<PowerShape> {
   static override type = "inkt-power" as const;
   static override props: RecordProps<PowerShape> = { w: T.number, h: T.number, kind: T.string };
   getDefaultProps() {
-    return { w: 56, h: 56, kind: "speedster" };
+    return { w: POWER_TOKEN, h: POWER_TOKEN, kind: "speedster" };
   }
   getGeometry(shape: PowerShape) {
-    return new Circle2d({ radius: 28, isFilled: true });
+    return new Circle2d({ radius: POWER_RADIUS, isFilled: true });
   }
   component(shape: PowerShape) {
     const def = POWER_UPS[shape.props.kind as PowerId];
@@ -509,8 +523,8 @@ export class PowerShapeUtil extends ShapeUtil<PowerShape> {
         <div className="gem-bob" style={{ width: shape.props.w, height: shape.props.h, display: "grid", placeItems: "center" }}>
           <div
             style={{
-              width: 44,
-              height: 44,
+              width: POWER_GEM,
+              height: POWER_GEM,
               background: "#fff",
               color: def?.ink ?? "#1D1D1F",
               display: "grid",
@@ -523,7 +537,7 @@ export class PowerShapeUtil extends ShapeUtil<PowerShape> {
               outlineOffset: 4,
             }}
           >
-            {def ? <PowerGlyph icon={def.icon} color={def.ink} size={24} /> : null}
+            {def ? <PowerGlyph icon={def.icon} color={def.ink} size={scaleWithPlayer(24)} /> : null}
           </div>
         </div>
       </HTMLContainer>
@@ -546,7 +560,7 @@ export class PulseShapeUtil extends ShapeUtil<PulseShape> {
     progress: T.number,
   };
   getDefaultProps() {
-    return { w: 64, h: 64, kind: "speedster", progress: 0 };
+    return { w: POWER_PULSE, h: POWER_PULSE, kind: "speedster", progress: 0 };
   }
   getGeometry(shape: PulseShape) {
     return new Circle2d({ radius: shape.props.w / 2, isFilled: false });
@@ -567,7 +581,7 @@ export class PulseShapeUtil extends ShapeUtil<PulseShape> {
             opacity: 0.45 + shape.props.progress * 0.4,
           }}
         >
-          {def ? <PowerGlyph icon={def.icon} color="#1d1d1d" size={18} /> : null}
+          {def ? <PowerGlyph icon={def.icon} color="#1d1d1d" size={scaleWithPlayer(18)} /> : null}
         </div>
       </HTMLContainer>
     );
@@ -616,21 +630,21 @@ export class DecoyShapeUtil extends ShapeUtil<DecoyShape> {
     avatar: T.string,
   };
   getDefaultProps() {
-    return { w: 72, h: 72, name: "Decoy", avatar: "otter" };
+    return { w: PLAYER_TOKEN, h: PLAYER_TOKEN, name: "Decoy", avatar: "otter" };
   }
   getGeometry(shape: DecoyShape) {
-    return new Circle2d({ radius: 36, isFilled: true });
+    return new Circle2d({ radius: PLAYER_RADIUS, isFilled: true });
   }
   component(shape: DecoyShape) {
     return (
       <HTMLContainer>
-        <div style={{ width: 72, height: 72, position: "relative", overflow: "visible" }}>
+        <div style={{ width: PLAYER_TOKEN, height: PLAYER_TOKEN, position: "relative", overflow: "visible" }}>
           <div
             data-inkt="art-clip"
             style={{
               position: "absolute",
-              left: 36 - ART_INSET.left,
-              top: 36 - ART_INSET.top,
+              left: PLAYER_RADIUS - ART_INSET.left,
+              top: PLAYER_RADIUS - ART_INSET.top,
               width: ART_INSET.left + ART_INSET.right,
               height: ART_INSET.top + ART_INSET.bottom,
               overflow: "hidden",
@@ -642,10 +656,10 @@ export class DecoyShapeUtil extends ShapeUtil<DecoyShape> {
             <div
               style={{
                 position: "absolute",
-                left: ART_INSET.left - 36,
-                top: ART_INSET.top - 36,
-                width: 72,
-                height: 72,
+                left: ART_INSET.left - PLAYER_RADIUS,
+                top: ART_INSET.top - PLAYER_RADIUS,
+                width: PLAYER_TOKEN,
+                height: PLAYER_TOKEN,
               }}
             >
               <Critter avatar={shape.props.avatar} ghost />

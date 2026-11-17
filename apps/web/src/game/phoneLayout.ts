@@ -1,5 +1,8 @@
+import { LANDSCAPE_BLOB_PX } from "@inkt/shared";
+
+export { LANDSCAPE_BLOB_PX };
+
 export const PHONE_LANDSCAPE_MAX_HEIGHT = 520;
-export const LANDSCAPE_BLOB_PX = 36;
 
 export type PhoneLayout = {
   mobile: boolean;

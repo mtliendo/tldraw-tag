@@ -15,6 +15,7 @@ import {
   clampToZoneArt,
   playerTint,
 } from "@inkt/shared";
+import { ZOOM_IN_MAX, clampZoom, followBounds, followCamera, zoomLimits } from "@/game/playGestures";
 import { INKT_SHAPES } from "@/shapes/inkt-shapes";
 import { liveLabelScale, layoutPlayers } from "@/game/layoutPlayers";
 import type { ViewState } from "@/game/types";
@@ -34,6 +35,8 @@ export function GameCanvas({
   blobPx = MOBILE_BLOB_PX,
   interactive = false,
   labelScale = 1,
+  landscape = false,
+  cameraZoom,
 }: {
   view: ViewState;
   selfId?: string | null;
@@ -43,6 +46,8 @@ export function GameCanvas({
   blobPx?: number;
   interactive?: boolean;
   labelScale?: number;
+  landscape?: boolean;
+  cameraZoom?: number;
 }) {
   const editorRef = useRef<Editor | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -57,6 +62,10 @@ export function GameCanvas({
   followPadRef.current = followPad;
   const blobPxRef = useRef(blobPx);
   blobPxRef.current = blobPx;
+  const landscapeRef = useRef(landscape);
+  landscapeRef.current = landscape;
+  const cameraZoomRef = useRef(cameraZoom);
+  cameraZoomRef.current = cameraZoom;
   const labelScaleRef = useRef(labelScale);
   labelScaleRef.current = labelScale;
   const viewRef = useRef(view);
@@ -87,28 +96,30 @@ export function GameCanvas({
     if (followPlayerRef.current) {
       const self =
         state.players.find((p) => p.id === selfIdRef.current) ?? state.players[0];
-      const blobZoom = Math.max(32, blobPxRef.current) / PLAYER_TOKEN;
-      const coverZoom = Math.max(vp.w / Math.max(1, zone.w), vp.h / Math.max(1, zone.h));
-      const zoom = Math.max(blobZoom, coverZoom);
-      const viewW = vp.w / zoom;
-      const viewH = vp.h / zoom;
-      const pad = followPadRef.current ?? { left: 0, right: 0, top: 0, bottom: 0 };
-      const innerW = Math.max(1, vp.w - pad.left - pad.right);
-      const innerH = Math.max(1, vp.h - pad.top - pad.bottom);
-      const focusX = pad.left + innerW / 2;
-      const focusY = pad.top + innerH / 2;
-      const originX = self?.x ?? zone.x + zone.w / 2;
-      const originY = self?.y ?? zone.y + zone.h / 2;
-      let left = originX - focusX / zoom;
-      let top = originY - focusY / zoom;
-      left = Math.min(Math.max(left, zone.x), zone.x + Math.max(0, zone.w - viewW));
-      top = Math.min(Math.max(top, zone.y), zone.y + Math.max(0, zone.h - viewH));
-      if (viewW >= zone.w) left = zone.x + (zone.w - viewW) / 2;
-      if (viewH >= zone.h) top = zone.y + (zone.h - viewH) / 2;
+      const limits = zoomLimits({
+        viewportW: vp.w,
+        viewportH: vp.h,
+        landscape: landscapeRef.current,
+        blobPx: blobPxRef.current,
+      });
+      const coverZone = Math.max(vp.w / Math.max(1, zone.w), vp.h / Math.max(1, zone.h));
+      const fallback = Math.max(limits.base, coverZone);
+      const zoom = clampZoom(cameraZoomRef.current ?? fallback, {
+        ...limits,
+        maxZoom: Math.max(limits.maxZoom, fallback * ZOOM_IN_MAX),
+      });
+      const cam = followCamera({
+        viewportW: vp.w,
+        viewportH: vp.h,
+        zoom,
+        player: self ? { x: self.x, y: self.y } : null,
+        bounds: followBounds(zone, vp.w, vp.h, zoom),
+        pad: followPadRef.current,
+      });
       // zoomToBounds() never zooms *in* past a fit, so Play-again (full arena)
       // would stay zoomed-out. Set the follow zoom explicitly.
       editor.stopCameraAnimation();
-      editor.setCamera({ x: -left, y: -top, z: zoom }, { immediate: true, force: true });
+      editor.setCamera({ x: -cam.left, y: -cam.top, z: cam.zoom }, { immediate: true, force: true });
     } else {
       editor.zoomToBounds(
         { x: zone.x, y: zone.y, w: zone.w, h: zone.h },
@@ -334,7 +345,7 @@ export function GameCanvas({
       cancelAnimationFrame(frame);
       cancelAnimationFrame(second);
     };
-  }, [zoneSig, phase, fit, followPlayer, followPad, blobPx]);
+  }, [zoneSig, phase, fit, followPlayer, followPad, blobPx, landscape, cameraZoom]);
 
   useEffect(() => {
     const el = wrapRef.current;

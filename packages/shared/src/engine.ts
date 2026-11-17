@@ -472,6 +472,36 @@ export class TagEngine {
     s.itId = choice.id;
   }
 
+  /** Park the latest human (else first player) on the south-east zone wall. */
+  pinCorner() {
+    const s = this.state;
+    if (s.phase !== "playing") return;
+    const players = Object.values(s.players);
+    const humans = players.filter((p) => !p.isBot);
+    const target = humans[humans.length - 1] ?? players[0];
+    if (!target) return;
+    const z = s.zone;
+    for (const p of players) {
+      p.vx = 0;
+      p.vy = 0;
+      if (p.id === target.id) continue;
+      if (p.x > z.x + z.w * 0.7 && p.y > z.y + z.h * 0.7) {
+        p.x = z.x + z.w * 0.45;
+        p.y = z.y + z.h * 0.45;
+        this.clampPlayer(p);
+      }
+    }
+    target.x = z.x + z.w;
+    target.y = z.y + z.h;
+    this.inputs.set(target.id, { x: 0, y: 0, usePower: false });
+    this.clampPlayer(target);
+    s.showcaseUntil = s.now + 8;
+    this.constrainBodies();
+    target.x = z.x + z.w;
+    target.y = z.y + z.h;
+    this.clampPlayer(target);
+  }
+
   tick(dt: number) {
     this.dt = dt;
     this.state.events = [];

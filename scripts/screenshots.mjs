@@ -166,6 +166,33 @@ async function blobWidth(page) {
   });
 }
 
+async function assertSelfClearOfPower(page, label) {
+  const report = await page.evaluate(() => {
+    const you = [...document.querySelectorAll('[data-inkt="label"]')].find((el) =>
+      /\byou\b/i.test(el.textContent || ""),
+    );
+    const self = you?.closest("[data-inkt='player']")?.getBoundingClientRect();
+    const pill = you?.getBoundingClientRect();
+    const power =
+      document.querySelector(".play-dock-portrait button, .play-dock-landscape button")?.getBoundingClientRect() ??
+      document.querySelector(".power-overlay")?.getBoundingClientRect();
+    if (!self || !power) return { ok: false, missing: true };
+    const hits = (a, b, slack = 2) =>
+      a.left < b.right - slack && a.right > b.left + slack && a.top < b.bottom - slack && a.bottom > b.top + slack;
+    return {
+      ok: !hits(self, power) && !(pill && hits(pill, power)),
+      self: self && { t: +self.top.toFixed(1), b: +self.bottom.toFixed(1), r: +self.right.toFixed(1) },
+      pill: pill && { t: +pill.top.toFixed(1), b: +pill.bottom.toFixed(1), r: +pill.right.toFixed(1) },
+      power: { t: +power.top.toFixed(1), b: +power.bottom.toFixed(1), l: +power.left.toFixed(1) },
+    };
+  });
+  if (report.missing) throw new Error(`${label}: missing player or power button`);
+  if (!report.ok) {
+    console.error(`power overlap (${label})`, report);
+    throw new Error(`${label}: player or name pill sits under the power button`);
+  }
+}
+
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({
   viewport: { width: 1440, height: 900 },
@@ -387,6 +414,16 @@ await releasePointers(joinPhone, [21, 22]);
 }
 await joinPhone.evaluate(() => window.dispatchEvent(new Event("inkt-reset-gestures")));
 await joinPhone.waitForTimeout(120);
+await admin.getByRole("button", { name: /pin corner/i }).click();
+await joinPhone.waitForTimeout(500);
+await shot(joinPhone, "21-player-iphone-landscape-corner.png");
+await assertSelfClearOfPower(joinPhone, "21-iphone-landscape-corner");
+await setPhoneViewport(joinPhone, IPHONE_PORTRAIT);
+await joinPhone.waitForTimeout(300);
+await admin.getByRole("button", { name: /pin corner/i }).click();
+await joinPhone.waitForTimeout(500);
+await shot(joinPhone, "20-player-mobile-corner.png");
+await assertSelfClearOfPower(joinPhone, "20-player-mobile-corner");
 await setPhoneViewport(joinPhone, ANDROID_LANDSCAPE);
 await shot(joinPhone, "10b-player-android-landscape.png");
 await assertBoard(joinPhone, "10b-android-landscape", { follow: true });

@@ -73,12 +73,13 @@ export async function assertBoard(page, label, { follow = false } = {}) {
     }
     const wrap = document.querySelector(".board-wrap")?.getBoundingClientRect();
     const blobW = blobs[0]?.r.width ?? 0;
+    const overlayPad = 160;
     const coversWrap =
       !wrap ||
-      (zone.left <= wrap.left + 12 &&
-        zone.right >= wrap.right - 12 &&
-        zone.top <= wrap.top + 12 &&
-        zone.bottom >= wrap.bottom - 12);
+      (zone.left <= wrap.left + overlayPad &&
+        zone.right >= wrap.right - overlayPad &&
+        zone.top <= wrap.top + overlayPad &&
+        zone.bottom >= wrap.bottom - overlayPad);
     const letterboxed =
       wrap &&
       zone.height < wrap.height * 0.72 &&

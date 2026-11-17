@@ -557,6 +557,19 @@ describe("TagEngine loop", () => {
     assert.equal(Object.values(engine.state.players).filter((p) => p.isIt).length, 1);
   });
 
+  it("pins a human to the south-east zone wall", () => {
+    const engine = new TagEngine({ roundLength: 20, rand: rng(3) });
+    engine.addPlayer({ id: "mia", name: "Mia" });
+    engine.spawnBots(4);
+    engine.start();
+    engine.pinCorner();
+    const mia = engine.state.players.mia;
+    const z = engine.state.zone;
+    assert.ok(mia);
+    assert.ok(mia.x > z.x + z.w * 0.7, `x ${mia.x} in zone ${z.x}+${z.w}`);
+    assert.ok(mia.y > z.y + z.h * 0.7, `y ${mia.y} in zone ${z.y}+${z.h}`);
+  });
+
   it("breaks equal IT time with fewer tags first", () => {
     const engine = new TagEngine({ roundLength: 20, shrinkInterval: 30, rand: rng(8) });
     engine.addPlayer({ id: "a", name: "Ada", avatar: "bolt" });

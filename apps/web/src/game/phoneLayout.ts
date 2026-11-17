@@ -33,15 +33,20 @@ export function readPhoneLayout(
   };
 }
 
+/** Overlay power button is 100px plus dock safe-area padding. */
+export const POWER_OVERLAY_PX = 100;
+export const POWER_DOCK_PAD_PX = 12;
+/** Half an on-screen token so the blob, not just its center, clears the button. */
+export const POWER_BLOB_CLEAR_PX = 28;
+export const POWER_CLEAR_PX = POWER_OVERLAY_PX + POWER_DOCK_PAD_PX + POWER_BLOB_CLEAR_PX;
+
 /** Keep the follow camera focused in the gap between overlay HUD and the power button. */
 export function landscapeFollowPad(width: number, height: number) {
   const hud = Math.min(56, Math.max(44, height * 0.14));
-  const power = Math.min(120, Math.max(88, Math.min(width, height) * 0.24));
   const bottom = Math.min(28, Math.max(12, height * 0.05));
-  return { left: 16, right: power, top: hud, bottom };
+  return { left: 16, right: POWER_CLEAR_PX, top: hud, bottom };
 }
 
-export function portraitFollowPad(width: number, height: number) {
-  const power = Math.min(112, Math.max(80, width * 0.26));
-  return { left: 0, right: Math.round(power * 0.4), top: 0, bottom: Math.round(power * 0.45) };
+export function portraitFollowPad(_width: number, _height: number) {
+  return { left: 0, right: POWER_CLEAR_PX, top: 0, bottom: POWER_CLEAR_PX };
 }

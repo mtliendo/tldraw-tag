@@ -13,7 +13,7 @@ export function QrPanel({
   compact?: boolean;
   projector?: boolean;
 }) {
-  const size = projector ? 176 : compact ? 108 : 196;
+  const size = projector ? 168 : compact ? 108 : 196;
   return (
     <div
       className="panel"

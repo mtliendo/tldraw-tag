@@ -35,6 +35,7 @@ declare module "tldraw" {
       self: boolean;
       labelX: number;
       labelAbove: boolean;
+      labelStack: number;
       squash: boolean;
     };
     "inkt-power": { w: number; h: number; kind: string };
@@ -286,12 +287,13 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
     self: T.boolean,
     labelX: T.number,
     labelAbove: T.boolean,
+    labelStack: T.number,
     squash: T.boolean,
   };
   getDefaultProps() {
     return {
-      w: 200,
-      h: 140,
+      w: 160,
+      h: 160,
       name: "Player",
       avatar: "bolt",
       isIt: false,
@@ -304,6 +306,7 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
       self: false,
       labelX: 0,
       labelAbove: false,
+      labelStack: 0,
       squash: false,
     };
   }
@@ -315,9 +318,19 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
     const held = POWER_UPS[shape.props.powerId as PowerId];
     const token = 80;
     const stroke = shape.props.isIt ? "#e03131" : "#1d1d1d";
+    const blobLeft = (shape.props.w - token) / 2;
+    const frozenPad = shape.props.frozen ? 18 : 0;
     return (
       <HTMLContainer>
-        <div style={{ width: shape.props.w, height: shape.props.h, opacity: shape.props.ghost ? 0.4 : 1, position: "relative" }}>
+        <div
+          style={{
+            width: shape.props.w,
+            height: shape.props.h,
+            opacity: shape.props.ghost ? 0.4 : 1,
+            position: "relative",
+            overflow: "visible",
+          }}
+        >
           <div
             className={
               shape.props.squash ? "blob-squash" : shape.props.frozen ? "ice-shimmer" : "blob-idle"
@@ -326,10 +339,27 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
               width: token,
               height: token,
               position: "absolute",
-              left: 60,
-              top: shape.props.labelAbove ? 36 : 0,
+              left: blobLeft,
+              top: 0,
             }}
           >
+            {shape.props.frozen && (
+              <svg
+                width={96}
+                height={96}
+                viewBox="0 0 96 96"
+                style={{ position: "absolute", left: -8, top: -8, pointerEvents: "none" }}
+              >
+                <path
+                  d="M20 28c2-11 14-18 28-18s26 7 28 18c9 3 14 12 12 24-3 16-12 28-40 30S9 68 8 52c-2-12 3-21 12-24z"
+                  fill="rgba(138,163,255,0.55)"
+                  stroke="#4465e9"
+                  strokeWidth="3.5"
+                />
+                <path d="M34 22l4 10M50 18v12M66 24l-4 10" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
+                <path d="M30 70l-2 10M48 74v12M66 70l2 10" stroke="#4465e9" strokeWidth="2.6" strokeLinecap="round" />
+              </svg>
+            )}
             <svg width={token} height={token} viewBox="0 0 80 80">
               <path d={blobPath(80, shape.props.name.length)} fill={avatar.color} stroke={stroke} strokeWidth={shape.props.isIt ? 6 : 4} />
             </svg>
@@ -345,6 +375,26 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
             {shape.props.isIt && (
               <div style={{ position: "absolute", top: -18, left: 0, right: 0, textAlign: "center", fontWeight: 800, color: "#e03131", fontSize: 16 }}>
                 it!
+              </div>
+            )}
+            {shape.props.frozen && (
+              <div
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  bottom: -6,
+                  transform: "translateX(-50%) rotate(-3deg)",
+                  background: "#8AA3FF",
+                  color: "#1d1d1d",
+                  border: "2px solid #1d1d1d",
+                  boxShadow: "2px 2px 0 #1d1d1d",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  padding: "1px 7px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                frozen
               </div>
             )}
             {held && (
@@ -371,23 +421,23 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
             className="player-label"
             style={{
               position: "absolute",
-              left: 100 + shape.props.labelX,
-              top: shape.props.labelAbove ? 0 : 86,
-              transform: "translateX(-50%) rotate(-2deg)",
-              fontSize: 16,
+              left: shape.props.w / 2,
+              top: token + 8 + frozenPad + shape.props.labelStack * 34,
+              transform: "translateX(-50%) rotate(-1.5deg)",
+              fontSize: 15,
               fontWeight: 700,
               color: "#1d1d1d",
-              background: shape.props.frozen ? "#8AA3FF" : "#FCE19C",
-              padding: "3px 10px",
+              background: "#FCE19C",
+              padding: "2px 8px",
               border: "2px solid #1d1d1d",
               boxShadow: "2px 2px 0 #1d1d1d",
-              maxWidth: 124,
+              maxWidth: 108,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
           >
-            {shape.props.frozen ? `brr ${shape.props.name}` : shape.props.name}
+            {shape.props.name}
           </div>
         </div>
       </HTMLContainer>

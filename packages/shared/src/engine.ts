@@ -172,6 +172,8 @@ export class TagEngine {
       hasShield: false,
       lastTaggedAt: -10,
       thinkAt: 0,
+      wanderX: spawn.x,
+      wanderY: spawn.y,
     };
     this.state.players[id] = player;
     this.inputs.set(id, { x: 0, y: 0, usePower: false });
@@ -286,18 +288,6 @@ export class TagEngine {
     };
 
     const players = Object.values(s.players);
-    const cols = 5;
-    players.forEach((p, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      p.x = z.x + z.w * 0.48 + col * 128;
-      p.y = z.y + z.h * 0.34 + row * 140;
-      p.vx = 0;
-      p.vy = 0;
-      this.clampPlayer(p);
-      this.inputs.set(p.id, { x: 0, y: 0, usePower: false });
-    });
-
     const freezeTarget = players.find((p) => !p.isIt && p.isBot) ?? players.find((p) => !p.isIt);
     if (freezeTarget) freezeTarget.frozenUntil = s.now + 14;
 
@@ -724,14 +714,7 @@ export class TagEngine {
     let tx = bot.x;
     let ty = bot.y;
     let usePower = false;
-
-    if (s.showcaseUntil > s.now) {
-      return {
-        x: (this.rand() - 0.5) * 0.15,
-        y: (this.rand() - 0.5) * 0.15,
-        usePower: false,
-      };
-    }
+    const side = bot.id.charCodeAt(bot.id.length - 1) % 2 === 0 ? 1 : -1;
 
     if (bot.isIt) {
       let nearest: EnginePlayer | null = null;
@@ -745,16 +728,20 @@ export class TagEngine {
         }
       }
       if (nearest) {
-        tx = nearest.x;
-        ty = nearest.y;
+        tx = nearest.x + nearest.vx * 0.28;
+        ty = nearest.y + nearest.vy * 0.28;
+        const away = normalize(nearest.x - bot.x, nearest.y - bot.y);
+        tx += -away.y * side * 36;
+        ty += away.x * side * 36;
       }
       if (bot.powerId === "speedster" && nearestD < 420) usePower = this.rand() < 0.45;
       if (bot.powerId === "ghost" && nearestD > 80) usePower = this.rand() < 0.2;
     } else if (it) {
       const dIt = dist(bot.x, bot.y, it.x, it.y);
-      if (dIt < 260) {
-        tx = bot.x + (bot.x - it.x);
-        ty = bot.y + (bot.y - it.y);
+      if (dIt < 300) {
+        const away = normalize(bot.x - it.x, bot.y - it.y);
+        tx = bot.x + away.x * 240 - away.y * side * 90;
+        ty = bot.y + away.y * 240 + away.x * side * 90;
         if (bot.powerId === "ghost" && dIt < 140) usePower = true;
         if (bot.powerId === "speedster" && dIt < 200) usePower = this.rand() < 0.5;
         if (bot.powerId === "shield" && dIt < 90) usePower = true;
@@ -764,18 +751,31 @@ export class TagEngine {
         if (bot.powerId === "freezer" && dIt < FREEZE_RANGE) usePower = true;
       } else {
         const loot = this.nearestLoot(bot);
-        if (loot) {
+        if (loot && loot.d < 520) {
           tx = loot.x;
           ty = loot.y;
         } else {
-          tx = bot.x + (this.rand() - 0.5) * 400;
-          ty = bot.y + (this.rand() - 0.5) * 400;
+          if (dist(bot.x, bot.y, bot.wanderX, bot.wanderY) < 55 || this.rand() < 0.08) {
+            const spot = this.randomInZone(ZONE_INSET);
+            bot.wanderX = spot.x;
+            bot.wanderY = spot.y;
+          }
+          tx = bot.wanderX;
+          ty = bot.wanderY;
         }
       }
+    } else {
+      if (dist(bot.x, bot.y, bot.wanderX, bot.wanderY) < 55) {
+        const spot = this.randomInZone(ZONE_INSET);
+        bot.wanderX = spot.x;
+        bot.wanderY = spot.y;
+      }
+      tx = bot.wanderX;
+      ty = bot.wanderY;
     }
 
     const dir = normalize(tx - bot.x, ty - bot.y);
-    const jitter = 0.18;
+    const jitter = 0.12;
     return {
       x: clamp(dir.x + (this.rand() - 0.5) * jitter, -1, 1),
       y: clamp(dir.y + (this.rand() - 0.5) * jitter, -1, 1),

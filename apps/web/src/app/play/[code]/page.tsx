@@ -51,9 +51,15 @@ export default function PlayPage() {
   if (!identity) return null;
 
   return (
-    <main style={{ height: "100dvh", display: "grid", gridTemplateRows: mobile ? "1fr 210px" : "1fr" }}>
-      <section style={{ position: "relative", minHeight: 0 }}>
-        <div style={{ position: "absolute", top: 12, left: 12, right: 12, zIndex: 6 }}>
+    <main
+      style={{
+        height: "100dvh",
+        display: "grid",
+        gridTemplateRows: mobile ? "auto minmax(0, 1fr) auto" : "1fr",
+      }}
+    >
+      {mobile && (
+        <div style={{ padding: "10px 12px 8px", zIndex: 6 }}>
           <TopHud view={view} selfPower={me ? { id: me.powerId, charges: me.charges } : undefined} />
           {announce && (
             <div className="chip" style={{ marginTop: 8, background: "#FCE19C" }}>
@@ -61,10 +67,22 @@ export default function PlayPage() {
             </div>
           )}
         </div>
+      )}
+      <section style={{ position: "relative", minHeight: 0 }}>
+        {!mobile && (
+          <div style={{ position: "absolute", top: 12, left: 12, right: 12, zIndex: 6 }}>
+            <TopHud view={view} selfPower={me ? { id: me.powerId, charges: me.charges } : undefined} />
+            {announce && (
+              <div className="chip" style={{ marginTop: 8, background: "#FCE19C" }}>
+                {announce}
+              </div>
+            )}
+          </div>
+        )}
         {error && (
           <div style={{ position: "absolute", top: 80, left: 16, zIndex: 8, color: "var(--it)" }}>{error}</div>
         )}
-        <GameCanvas view={view} selfId={me?.id} />
+        <GameCanvas view={view} selfId={me?.id} fitMode={mobile ? "cover" : "contain"} />
         {view.phase === "lobby" && (
           <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "end center", padding: 24, zIndex: 6 }}>
             <div className="panel" style={{ padding: 16, textAlign: "center" }}>
@@ -86,7 +104,7 @@ export default function PlayPage() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "16px 20px 40px",
+            padding: "12px 18px 28px",
             background: "var(--card)",
             borderTop: "2.5px solid var(--ink)",
           }}

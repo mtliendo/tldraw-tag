@@ -90,4 +90,23 @@ describe("TagEngine loop", () => {
     assert.ok(pub.players.some((p) => p.powerId === "paver"));
     assert.ok(pub.shrinkIn > 0 && pub.shrinkIn <= 2);
   });
+
+  it("lets bots chase and flee instead of sitting still after showcase", () => {
+    const engine = new TagEngine({ roundLength: 30, rand: rng(19) });
+    engine.addPlayer({ name: "Ada", avatar: "bolt" });
+    engine.spawnBots(8);
+    engine.start();
+    const before = Object.fromEntries(
+      Object.values(engine.state.players).map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
+    engine.showcase();
+    for (let i = 0; i < 24; i++) engine.tick(0.05);
+    const moved = Object.values(engine.state.players).filter((p) => {
+      const prev = before[p.id];
+      const dx = p.x - prev.x;
+      const dy = p.y - prev.y;
+      return dx * dx + dy * dy > 64;
+    });
+    assert.ok(moved.length >= 5);
+  });
 });

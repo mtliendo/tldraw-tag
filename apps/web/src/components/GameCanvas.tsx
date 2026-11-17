@@ -15,21 +15,39 @@ const TOKEN_R = PLAYER_TOKEN / 2;
 export function GameCanvas({
   view,
   selfId,
+  fitMode = "contain",
 }: {
   view: ViewState;
   selfId?: string | null;
+  fitMode?: "contain" | "cover";
 }) {
   const editorRef = useRef<Editor | null>(null);
   const known = useRef(new Set<TLShapeId>());
   const prevIt = useRef(new Map<string, boolean>());
   const squashUntil = useRef(new Map<string, number>());
+  const fitModeRef = useRef(fitMode);
+  fitModeRef.current = fitMode;
 
   const fit = useCallback((editor: Editor) => {
     editor.setCameraOptions({ isLocked: false });
-    editor.zoomToBounds(
-      { x: -48, y: -48, w: ARENA_W + 96, h: ARENA_H + 96 },
-      { inset: 8, animation: { duration: 0 } },
-    );
+    if (fitModeRef.current === "cover") {
+      const vsb = editor.getViewportScreenBounds();
+      const aspect = vsb.w / Math.max(1, vsb.h);
+      let bw = ARENA_W;
+      let bh = ARENA_W / aspect;
+      if (bh > ARENA_H) {
+        bh = ARENA_H;
+        bw = ARENA_H * aspect;
+      }
+      const bx = (ARENA_W - bw) / 2;
+      const by = (ARENA_H - bh) / 2;
+      editor.zoomToBounds({ x: bx, y: by, w: bw, h: bh }, { inset: 6, animation: { duration: 0 } });
+    } else {
+      editor.zoomToBounds(
+        { x: -48, y: -48, w: ARENA_W + 96, h: ARENA_H + 96 },
+        { inset: 8, animation: { duration: 0 } },
+      );
+    }
     editor.setCameraOptions({ isLocked: true });
     editor.setCamera(editor.getCamera());
   }, []);
@@ -128,14 +146,15 @@ export function GameCanvas({
           squashUntil.current.set(p.id, now + 420);
         }
         prevIt.current.set(p.id, p.isIt);
-        const above = p.labelAbove;
+        const stack = p.labelStack ?? 0;
+        const boxH = 88 + (p.frozen ? 18 : 0) + (stack + 1) * 34;
         make(`player:${p.id}`, {
           type: "inkt-player",
-          x: p.x - 100,
-          y: p.y - (above ? TOKEN_R + 36 : TOKEN_R),
+          x: p.x - 80,
+          y: p.y - TOKEN_R,
           props: {
-            w: 200,
-            h: 140,
+            w: 160,
+            h: boxH,
             name: p.name,
             avatar: p.avatar,
             isIt: p.isIt,
@@ -147,7 +166,8 @@ export function GameCanvas({
             charges: p.charges,
             self: p.id === selfId,
             labelX: p.labelX,
-            labelAbove: above,
+            labelAbove: false,
+            labelStack: stack,
             squash: (squashUntil.current.get(p.id) ?? 0) > now,
           },
         });
@@ -184,6 +204,7 @@ export function GameCanvas({
           sync(editor, view);
           fit(editor);
           const onResize = () => fit(editor);
+          requestAnimationFrame(() => fit(editor));
           window.addEventListener("resize", onResize);
           editor.sideEffects.registerAfterChangeHandler("instance_page_state", () => {
             if (editor.getSelectedShapeIds().length) editor.setSelectedShapes([]);

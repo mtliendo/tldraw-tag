@@ -72,7 +72,7 @@ await admin.getByRole("button", { name: /^start$/i }).click();
 await admin.waitForTimeout(900);
 await admin.getByRole("button", { name: /showcase/i }).click();
 await admin.waitForFunction(() => /boost/i.test(document.body.innerText), null, { timeout: 8000 });
-await admin.waitForTimeout(500);
+await admin.waitForTimeout(2200);
 await shot(admin, "04-ingame-powers.png");
 await shot(join, "04b-player.png");
 await shot(screen, "07-projector.png");

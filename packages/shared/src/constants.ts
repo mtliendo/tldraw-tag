@@ -46,7 +46,7 @@ export const FREEZE_DURATION = 1.5;
 export const FREEZE_RANGE = 120;
 export const SHIELD_DURATION = 12;
 
-export const BOT_THINK_INTERVAL = 0.22;
+export const BOT_THINK_INTERVAL = 0.28;
 export const MAX_PLAYERS = 48;
 export const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export const ROOM_CODE_LENGTH = 4;

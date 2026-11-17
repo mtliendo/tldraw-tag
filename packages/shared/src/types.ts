@@ -51,6 +51,8 @@ export type EnginePlayer = {
   hasShield: boolean;
   lastTaggedAt: number;
   thinkAt: number;
+  wanderX: number;
+  wanderY: number;
 };
 
 export type EnginePowerUp = {

@@ -9,7 +9,7 @@ import {
   type RecordProps,
   type TLShape,
 } from "tldraw";
-import { POWER_UPS, STROKE, type PowerId } from "@inkt/shared";
+import { ART_INSET, POWER_UPS, STROKE, type PowerId } from "@inkt/shared";
 import { Critter } from "@/components/Critter";
 import { PowerGlyph } from "@/components/PowerGlyph";
 import { shortPlayerName } from "@/game/layoutPlayers";
@@ -358,6 +358,27 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
               overflow: "visible",
             }}
           >
+            <div
+              data-inkt="art-clip"
+              style={{
+                position: "absolute",
+                left: token / 2 - ART_INSET.left,
+                top: token / 2 - ART_INSET.top,
+                width: ART_INSET.left + ART_INSET.right,
+                height: ART_INSET.top + ART_INSET.bottom,
+                overflow: "hidden",
+                pointerEvents: "none",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  left: ART_INSET.left - token / 2,
+                  top: ART_INSET.top - token / 2,
+                  width: token,
+                  height: token,
+                }}
+              >
             {shape.props.self && (
               <span
                 style={{
@@ -402,6 +423,8 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
                 <PowerGlyph icon={held.icon} color={held.ink} size={12} />
               </div>
             )}
+              </div>
+            </div>
           </div>
           {shape.props.showLabel && shape.props.labelLeader && (
             <svg
@@ -600,7 +623,30 @@ export class DecoyShapeUtil extends ShapeUtil<DecoyShape> {
     return (
       <HTMLContainer>
         <div style={{ width: 72, height: 72, position: "relative", overflow: "visible" }}>
-          <Critter avatar={shape.props.avatar} ghost />
+          <div
+            data-inkt="art-clip"
+            style={{
+              position: "absolute",
+              left: 36 - ART_INSET.left,
+              top: 36 - ART_INSET.top,
+              width: ART_INSET.left + ART_INSET.right,
+              height: ART_INSET.top + ART_INSET.bottom,
+              overflow: "hidden",
+              pointerEvents: "none",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                left: ART_INSET.left - 36,
+                top: ART_INSET.top - 36,
+                width: 72,
+                height: 72,
+              }}
+            >
+              <Critter avatar={shape.props.avatar} ghost />
+            </div>
+          </div>
         </div>
       </HTMLContainer>
     );

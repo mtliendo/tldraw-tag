@@ -1,4 +1,4 @@
-import { INTERP_DELAY_MS, PLAYER_RADIUS, lerp } from "@inkt/shared";
+import { INTERP_DELAY_MS, clampToZoneArt, lerp } from "@inkt/shared";
 import type { ViewPlayer, ViewState } from "./types";
 
 type Snap = { t: number; state: ViewState };
@@ -33,17 +33,17 @@ function mix(a: ViewState, b: ViewState, t: number): ViewState {
   const zone = b.zone;
   const players: ViewPlayer[] = b.players.map((p) => {
     const o = prev.get(p.id);
-    if (!o) return { ...p, ...clampToZone(p.x, p.y, zone, overlayPad(p)) };
+    if (!o) return { ...p, ...clampToZoneArt(p.x, p.y, zone) };
     return {
       ...p,
-      ...clampToZone(lerp(o.x, p.x, t), lerp(o.y, p.y, t), zone, overlayPad(p)),
+      ...clampToZoneArt(lerp(o.x, p.x, t), lerp(o.y, p.y, t), zone),
     };
   });
   const decoyPrev = new Map(a.decoys.map((d) => [d.id, d]));
   const decoys = b.decoys.map((d) => {
     const o = decoyPrev.get(d.id);
-    if (!o) return { ...d, ...clampToZone(d.x, d.y, zone) };
-    return { ...d, ...clampToZone(lerp(o.x, d.x, t), lerp(o.y, d.y, t), zone) };
+    if (!o) return { ...d, ...clampToZoneArt(d.x, d.y, zone) };
+    return { ...d, ...clampToZoneArt(lerp(o.x, d.x, t), lerp(o.y, d.y, t), zone) };
   });
   return clampState({
     ...b,
@@ -57,26 +57,7 @@ function clampState(state: ViewState): ViewState {
   const zone = state.zone;
   return {
     ...state,
-    players: state.players.map((p) => ({ ...p, ...clampToZone(p.x, p.y, zone, overlayPad(p)) })),
-    decoys: state.decoys.map((d) => ({ ...d, ...clampToZone(d.x, d.y, zone) })),
-  };
-}
-
-function overlayPad(p: { frozen?: boolean; hasShield?: boolean }) {
-  if (p.frozen) return 16;
-  if (p.hasShield) return 10;
-  return 0;
-}
-
-function clampToZone(
-  x: number,
-  y: number,
-  zone: { x: number; y: number; w: number; h: number },
-  extra = 0,
-) {
-  const inset = PLAYER_RADIUS + 2 + extra;
-  return {
-    x: Math.min(Math.max(x, zone.x + inset), zone.x + zone.w - inset),
-    y: Math.min(Math.max(y, zone.y + inset), zone.y + zone.h - inset),
+    players: state.players.map((p) => ({ ...p, ...clampToZoneArt(p.x, p.y, zone) })),
+    decoys: state.decoys.map((d) => ({ ...d, ...clampToZoneArt(d.x, d.y, zone) })),
   };
 }

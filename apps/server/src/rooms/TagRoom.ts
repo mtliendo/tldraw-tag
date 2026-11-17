@@ -172,6 +172,9 @@ export class TagRoom extends Room<{ state: GameState }> {
       case "showcase":
         this.engine.showcase();
         break;
+      case "pinArt":
+        this.engine.pinArt({ minZone: Boolean(message.minZone) });
+        break;
       default:
         throw new Error(`Unknown admin action: ${action}`);
     }

@@ -102,6 +102,7 @@ export function Critter({
       }}
     >
       <img
+        data-inkt="art"
         src={critterSrc(avatar, state)}
         alt=""
         width={size}

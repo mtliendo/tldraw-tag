@@ -9,6 +9,14 @@ export async function assertBoard(page, label, { follow = false } = {}) {
     const blobs = [...document.querySelectorAll('[data-inkt="player"]')]
       .map((el) => ({ id: el.getAttribute("data-player-id") || "?", r: el.getBoundingClientRect() }))
       .filter((b) => b.r.width > 6 && b.r.height > 6);
+    const arts = [
+      ...document.querySelectorAll('[data-inkt="art"], [data-inkt="art-clip"], [data-inkt="player"] .shield-ring'),
+    ]
+      .map((el) => ({
+        id: el.closest("[data-inkt='player']")?.getAttribute("data-player-id") || el.getAttribute("data-inkt") || "art",
+        r: el.getBoundingClientRect(),
+      }))
+      .filter((b) => b.r.width > 4 && b.r.height > 4);
     const walls = [...document.querySelectorAll('[data-inkt="wall"]')]
       .map((el) => el.getBoundingClientRect())
       .filter((r) => r.width > 2 && r.height > 2);
@@ -22,6 +30,14 @@ export async function assertBoard(page, label, { follow = false } = {}) {
         b.r.right > zone.right + pad ||
         b.r.top < zone.top - pad ||
         b.r.bottom > zone.bottom + pad,
+    );
+    const artPad = 2;
+    const artLeaks = arts.filter(
+      (b) =>
+        b.r.left < zone.left - artPad ||
+        b.r.right > zone.right + artPad ||
+        b.r.top < zone.top - artPad ||
+        b.r.bottom > zone.bottom + artPad,
     );
     const hits = (a, b, slack = 3) =>
       a.left < b.right - slack && a.right > b.left + slack && a.top < b.bottom - slack && a.bottom > b.top + slack;
@@ -54,8 +70,9 @@ export async function assertBoard(page, label, { follow = false } = {}) {
       zone.top > wrap.top + 24 &&
       zone.bottom < wrap.bottom - 24;
     return {
-      ok: leaks.length === 0 && wallHits.length === 0 && labelHits.length === 0,
+      ok: leaks.length === 0 && artLeaks.length === 0 && wallHits.length === 0 && labelHits.length === 0,
       leaks: leaks.map((b) => b.id),
+      artLeaks: artLeaks.map((b) => b.id),
       wallHits,
       labelHits,
       blobCount: blobs.length,
@@ -69,7 +86,7 @@ export async function assertBoard(page, label, { follow = false } = {}) {
   });
   if (!report.ok) {
     console.error(`board assert failed (${label})`, report);
-    throw new Error(`${label}: blobs left the zone, overlapped a wall, or stacked labels`);
+    throw new Error(`${label}: blobs or art left the zone, overlapped a wall, or stacked labels`);
   }
   if (!follow && report.blobCount >= 2 && report.blobCount <= 22 && report.labelCount < report.blobCount) {
     console.error(`board labels missing (${label})`, report);

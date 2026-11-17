@@ -100,3 +100,28 @@ export function separateCircleFromAabb(
   if (!hit.hit) return { x: cx, y: cy };
   return { x: cx + hit.nx * hit.depth, y: cy + hit.ny * hit.depth };
 }
+
+/** Push an art AABB (offsets from a body center) out of a wall rectangle. */
+export function separateAabbFromAabb(
+  px: number,
+  py: number,
+  inset: { left: number; right: number; top: number; bottom: number },
+  rect: { x: number; y: number; w: number; h: number },
+): { x: number; y: number } {
+  const left = px - inset.left;
+  const right = px + inset.right;
+  const top = py - inset.top;
+  const bottom = py + inset.bottom;
+  if (right <= rect.x || left >= rect.x + rect.w || bottom <= rect.y || top >= rect.y + rect.h) {
+    return { x: px, y: py };
+  }
+  const dl = right - rect.x;
+  const dr = rect.x + rect.w - left;
+  const dt = bottom - rect.y;
+  const db = rect.y + rect.h - top;
+  const min = Math.min(dl, dr, dt, db);
+  if (min === dl) return { x: px - dl, y: py };
+  if (min === dr) return { x: px + dr, y: py };
+  if (min === dt) return { x: px, y: py - dt };
+  return { x: px, y: py + db };
+}

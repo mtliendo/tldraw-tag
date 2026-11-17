@@ -29,7 +29,8 @@ import {
   WALL_PLACE_OFFSET,
   WALL_THICKNESS,
   WALL_WIDTH,
-  ZONE_INSET,
+  ART_INSET,
+  clampToZoneArt,
   MAX_DISPLACE_PER_SEC,
   SEPARATION_ITERS,
   SEPARATION_STIFFNESS,
@@ -39,13 +40,12 @@ import {
 import { AVATARS } from "./avatars";
 import { pickWeightedPower, POWER_UPS, type PowerId } from "./powerups";
 import {
-  circleHitsAabb,
   clamp,
   dist,
   lerpRect,
   makeRoomCode,
   normalize,
-  separateCircleFromAabb,
+  separateAabbFromAabb,
   uid,
 } from "./ids";
 import type {
@@ -338,8 +338,7 @@ export class TagEngine {
         h: WALL_THICKNESS,
         expiresAt: s.now + 18,
       };
-      wall.x = clamp(wall.x, z.x + ZONE_INSET, z.x + z.w - ZONE_INSET - wall.w);
-      wall.y = clamp(wall.y, z.y + ZONE_INSET, z.y + z.h - ZONE_INSET - wall.h);
+      this.clampWallToZone(wall);
       if (!this.wallHitsAnyPlayer(wall)) {
         s.walls[wall.id] = wall;
         placedWall = true;
@@ -357,8 +356,7 @@ export class TagEngine {
           h: WALL_THICKNESS,
           expiresAt: s.now + 18,
         };
-        wall.x = clamp(wall.x, z.x + ZONE_INSET, z.x + z.w - ZONE_INSET - wall.w);
-        wall.y = clamp(wall.y, z.y + ZONE_INSET, z.y + z.h - ZONE_INSET - wall.h);
+        this.clampWallToZone(wall);
         if (this.wallHitsAnyPlayer(wall)) continue;
         s.walls[wall.id] = wall;
         break;
@@ -384,6 +382,70 @@ export class TagEngine {
     s.nextShrinkAt = s.now + 1.5;
     s.shrinkEndsAt = 0;
     this.push({ type: "announce", text: "Power-ups in the zone" });
+  }
+
+  /** Pin players to all four walls in idle / IT / shield / frozen so art cannot leave the zone. */
+  pinArt(opts: { minZone?: boolean } = {}) {
+    const s = this.state;
+    if (s.phase !== "playing") return;
+    const players = Object.values(s.players);
+    if (opts.minZone) {
+      const min = minZoneSize(players.length);
+      s.zone = {
+        x: (ARENA_W - min.w) / 2,
+        y: (ARENA_H - min.h) / 2,
+        w: min.w,
+        h: min.h,
+      };
+      s.nextZone = { ...s.zone };
+      s.shrinkEndsAt = 0;
+    }
+    const z = s.zone;
+    const sides: Array<"n" | "e" | "s" | "w"> = ["n", "e", "s", "w"];
+    const kinds: Array<"idle" | "it" | "shield" | "frozen"> = ["idle", "it", "shield", "frozen"];
+    const perWall = Math.max(1, Math.ceil(players.length / 4));
+    let itId = "";
+    players.forEach((p, i) => {
+      const side = sides[i % 4];
+      const slot = Math.floor(i / 4);
+      const kind = kinds[players.length <= 4 ? i % 4 : slot % 4];
+      const along = (slot + 1) / (perWall + 1);
+      p.vx = 0;
+      p.vy = 0;
+      p.ghostUntil = 0;
+      p.hasShield = false;
+      p.frozenUntil = 0;
+      p.isIt = false;
+      this.inputs.set(p.id, { x: 0, y: 0, usePower: false });
+      if (kind === "frozen") p.frozenUntil = s.now + 30;
+      else if (kind === "shield") p.hasShield = true;
+      else if (kind === "it") {
+        p.isIt = true;
+        if (!itId) itId = p.id;
+      }
+      if (side === "n") {
+        p.x = z.x + z.w * along;
+        p.y = z.y;
+      } else if (side === "s") {
+        p.x = z.x + z.w * along;
+        p.y = z.y + z.h;
+      } else if (side === "w") {
+        p.x = z.x;
+        p.y = z.y + z.h * along;
+      } else {
+        p.x = z.x + z.w;
+        p.y = z.y + z.h * along;
+      }
+      this.clampPlayer(p);
+    });
+    if (itId) s.itId = itId;
+    else if (players[0]) {
+      players[0].isIt = true;
+      s.itId = players[0].id;
+    }
+    s.walls = {};
+    s.showcaseUntil = s.now + 8;
+    this.constrainBodies();
   }
 
   tick(dt: number) {
@@ -594,8 +656,9 @@ export class TagEngine {
       decoy.vx *= 0.985;
       decoy.vy *= 0.985;
       const z = s.zone;
-      decoy.x = clamp(decoy.x, z.x + ZONE_INSET, z.x + z.w - ZONE_INSET);
-      decoy.y = clamp(decoy.y, z.y + ZONE_INSET, z.y + z.h - ZONE_INSET);
+      const next = clampToZoneArt(decoy.x, decoy.y, z);
+      decoy.x = next.x;
+      decoy.y = next.y;
     }
   }
 
@@ -720,46 +783,38 @@ export class TagEngine {
 
   private collideWalls(p: EnginePlayer) {
     const z = this.state.zone;
-    const inset = this.playerInset(p);
-    const x0 = z.x + inset;
-    const x1 = z.x + z.w - inset;
-    const y0 = z.y + inset;
-    const y1 = z.y + z.h - inset;
     for (let pass = 0; pass < 3; pass++) {
       for (const wall of Object.values(this.state.walls)) {
-        const next = separateCircleFromAabb(p.x, p.y, PLAYER_RADIUS, wall);
-        p.x = clamp(next.x, x0, x1);
-        p.y = clamp(next.y, y0, y1);
+        const next = separateAabbFromAabb(p.x, p.y, ART_INSET, wall);
+        const c = clampToZoneArt(next.x, next.y, z);
+        p.x = c.x;
+        p.y = c.y;
       }
     }
   }
 
   private keepWallsInZone() {
-    const z = this.state.zone;
-    const pad = ZONE_INSET;
     for (const [id, wall] of Object.entries(this.state.walls)) {
-      const maxX = z.x + z.w - pad - wall.w;
-      const maxY = z.y + z.h - pad - wall.h;
-      if (maxX < z.x + pad || maxY < z.y + pad) {
-        delete this.state.walls[id];
-        continue;
-      }
-      wall.x = clamp(wall.x, z.x + pad, maxX);
-      wall.y = clamp(wall.y, z.y + pad, maxY);
+      if (!this.clampWallToZone(wall)) delete this.state.walls[id];
     }
   }
 
-  private playerInset(p: EnginePlayer) {
-    if (p.frozenUntil > this.state.now) return ZONE_INSET + 16;
-    if (p.hasShield) return ZONE_INSET + 10;
-    return ZONE_INSET;
+  private clampWallToZone(wall: { x: number; y: number; w: number; h: number }) {
+    const z = this.state.zone;
+    const maxX = z.x + z.w - ART_INSET.right - wall.w;
+    const maxY = z.y + z.h - ART_INSET.bottom - wall.h;
+    const minX = z.x + ART_INSET.left;
+    const minY = z.y + ART_INSET.top;
+    if (maxX < minX || maxY < minY) return false;
+    wall.x = clamp(wall.x, minX, maxX);
+    wall.y = clamp(wall.y, minY, maxY);
+    return true;
   }
 
   private clampPlayer(p: EnginePlayer) {
-    const z = this.state.zone;
-    const inset = this.playerInset(p);
-    p.x = clamp(p.x, z.x + inset, z.x + z.w - inset);
-    p.y = clamp(p.y, z.y + inset, z.y + z.h - inset);
+    const next = clampToZoneArt(p.x, p.y, this.state.zone);
+    p.x = next.x;
+    p.y = next.y;
   }
 
   private resolveTags() {
@@ -907,8 +962,7 @@ export class TagEngine {
         h,
         expiresAt: this.state.now + WALL_LIFETIME,
       };
-      wall.x = clamp(wall.x, z.x + ZONE_INSET, z.x + z.w - ZONE_INSET - wall.w);
-      wall.y = clamp(wall.y, z.y + ZONE_INSET, z.y + z.h - ZONE_INSET - wall.h);
+      if (!this.clampWallToZone(wall)) continue;
       if (this.wallHitsAnyPlayer(wall)) continue;
       this.state.walls[wall.id] = wall;
       return true;
@@ -919,7 +973,8 @@ export class TagEngine {
   private wallHitsAnyPlayer(wall: { x: number; y: number; w: number; h: number }) {
     for (const p of Object.values(this.state.players)) {
       if (p.ghostUntil > this.state.now) continue;
-      if (circleHitsAabb(p.x, p.y, PLAYER_RADIUS + 1, wall).hit) return true;
+      const pushed = separateAabbFromAabb(p.x, p.y, ART_INSET, wall);
+      if (pushed.x !== p.x || pushed.y !== p.y) return true;
     }
     return false;
   }
@@ -940,8 +995,8 @@ export class TagEngine {
     const z = this.state.zone;
     const orbit = bot.botOrbit || 0.55;
     const t = (bot.botPhase || 0) + this.state.now * (bot.botSpin || 0) * 0.15;
-    const rx = Math.max(36, (z.w / 2 - ZONE_INSET) * orbit);
-    const ry = Math.max(36, (z.h / 2 - ZONE_INSET) * orbit);
+    const rx = Math.max(36, (z.w / 2 - (ART_INSET.left + ART_INSET.right) / 2) * orbit);
+    const ry = Math.max(36, (z.h / 2 - (ART_INSET.top + ART_INSET.bottom) / 2) * orbit);
     const wobble = Math.sin(this.state.now * (0.7 + orbit) + (bot.botPhase || 0)) * 28;
     return {
       x: z.x + z.w / 2 + Math.cos(t) * rx + wobble * 0.4,

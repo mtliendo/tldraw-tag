@@ -32,6 +32,54 @@ export const ZONE_CELL_GAP = 12;
 export const ZONE_SHRINK_DURATION = 1.6;
 export const ZONE_WARN_SECONDS = 2.5;
 export const ZONE_INSET = PLAYER_RADIUS + 2;
+
+/** World-px from body center to a painted critter edge, including SVG viewBox and drop-shadow. */
+export type ArtInset = { left: number; right: number; top: number; bottom: number };
+
+/**
+ * Critter SVGs share viewBox `-8 -10 80 80` with the body at (40, 46). At R=36 the
+ * <img> is 80 × (36/21) ≈ 137px, so the box extends ~68.6 left/right, 78.9 above,
+ * and 58.3 below the hitbox center. Top is larger (ears, crown, IT flame). Margin
+ * covers the 2px zone stroke, 2px drop-shadow, and CSS shield/self rings.
+ */
+export const ART_INSET: ArtInset = {
+  left: 72,
+  right: 72,
+  top: 82,
+  bottom: 64,
+};
+
+export function clampToZoneArt(
+  x: number,
+  y: number,
+  zone: { x: number; y: number; w: number; h: number },
+  inset: ArtInset = ART_INSET,
+) {
+  const x0 = zone.x + inset.left;
+  const x1 = zone.x + zone.w - inset.right;
+  const y0 = zone.y + inset.top;
+  const y1 = zone.y + zone.h - inset.bottom;
+  return {
+    x: x1 < x0 ? zone.x + zone.w / 2 : Math.min(Math.max(x, x0), x1),
+    y: y1 < y0 ? zone.y + zone.h / 2 : Math.min(Math.max(y, y0), y1),
+  };
+}
+
+export function artInsideZone(
+  x: number,
+  y: number,
+  zone: { x: number; y: number; w: number; h: number },
+  inset: ArtInset = ART_INSET,
+  eps = 0.51,
+) {
+  return (
+    x - inset.left >= zone.x - eps &&
+    x + inset.right <= zone.x + zone.w + eps &&
+    y - inset.top >= zone.y - eps &&
+    y + inset.bottom <= zone.y + zone.h + eps
+  );
+}
+
 export const SEPARATION_ITERS = 8;
 export const SEPARATION_STIFFNESS = 0.45;
 export const MAX_DISPLACE_PER_SEC = 720;
@@ -68,10 +116,11 @@ export function minZoneSize(playerCount: number): { w: number; h: number } {
   const n = Math.max(1, playerCount);
   const cell = PLAYER_SEPARATION + ZONE_CELL_GAP;
   const interior = n * cell * cell * ZONE_PACK_FACTOR;
-  const pad = ZONE_INSET * 2;
+  const padX = ART_INSET.left + ART_INSET.right;
+  const padY = ART_INSET.top + ART_INSET.bottom;
   const fits = (w: number) => {
     const h = w / ZONE_ASPECT;
-    return Math.max(0, w - pad) * Math.max(0, h - pad) >= interior && h >= ZONE_MIN_H;
+    return Math.max(0, w - padX) * Math.max(0, h - padY) >= interior && h >= ZONE_MIN_H;
   };
   if (!fits(ARENA_W)) return { w: ARENA_W, h: ARENA_H };
   let lo = ZONE_MIN_W;

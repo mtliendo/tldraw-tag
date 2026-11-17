@@ -111,6 +111,7 @@ export function Leaderboard({
         </div>
       )}
       <ol
+        data-inkt="lb"
         style={{
           listStyle: "none",
           padding: 0,
@@ -130,6 +131,8 @@ export function Leaderboard({
           return (
             <li
               key={row.id}
+              data-inkt="lb-row"
+              data-rank={i + 1}
               style={{
                 display: "grid",
                 gridTemplateColumns: compact ? "28px 28px 1fr 48px" : "28px 40px 1fr 64px",

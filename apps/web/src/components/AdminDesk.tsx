@@ -162,6 +162,13 @@ export function AdminDesk({
               >
                 Showcase
               </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => admin("pinArt")}
+                disabled={view.phase !== "playing"}
+              >
+                Pin art
+              </button>
               {code && (
                 <a className="btn btn-ghost" href={screenUrl(code)} target="_blank" rel="noreferrer">
                   Projector

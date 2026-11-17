@@ -10,6 +10,8 @@ import {
   POWER_RADIUS,
   WALL_THICKNESS,
   WALL_WIDTH,
+  ART_INSET,
+  artInsideZone,
   ZONE_INSET,
   ZONE_MIN_H,
   ZONE_MIN_W,
@@ -74,6 +76,7 @@ describe("TagEngine loop", () => {
         assert.ok(p.x + PLAYER_RADIUS <= z.x + z.w + 0.05, `${p.name} right of zone at tick ${i}`);
         assert.ok(p.y - PLAYER_RADIUS >= z.y - 0.05, `${p.name} above zone at tick ${i}`);
         assert.ok(p.y + PLAYER_RADIUS <= z.y + z.h + 0.05, `${p.name} below zone at tick ${i}`);
+        assert.ok(artInsideZone(p.x, p.y, z), `${p.name} art left the zone at tick ${i}`);
       }
     }
     assert.equal(engine.state.phase, "ended");
@@ -538,12 +541,60 @@ describe("TagEngine loop", () => {
     frozen!.x = z.x + z.w / 2;
     frozen!.y = z.y;
     engine.tick(0.05);
-    const extra = 16;
-    assert.ok(frozen!.y >= z.y + ZONE_INSET + extra - 0.5, `frozen y ${frozen!.y} vs ${z.y + ZONE_INSET + extra}`);
-    assert.ok(frozen!.y <= z.y + z.h - ZONE_INSET - extra + 0.5);
+    assert.ok(artInsideZone(frozen!.x, frozen!.y, z), `frozen y ${frozen!.y} vs ${z.y + ART_INSET.top}`);
     frozen!.x = z.x;
     engine.tick(0.05);
-    assert.ok(frozen!.x >= z.x + ZONE_INSET + extra - 0.5);
+    assert.ok(artInsideZone(frozen!.x, frozen!.y, z));
+  });
+
+  it("pins idle, IT, shield, and frozen art inside every wall and the min zone", () => {
+    const statesOf = (engine: TagEngine) => {
+      const now = engine.state.now;
+      const players = Object.values(engine.state.players);
+      return {
+        idle: players.filter((p) => !p.isIt && !p.hasShield && p.frozenUntil <= now),
+        it: players.filter((p) => p.isIt),
+        shield: players.filter((p) => p.hasShield),
+        frozen: players.filter((p) => p.frozenUntil > now),
+      };
+    };
+    const assertPinned = (engine: TagEngine, label: string) => {
+      const z = engine.state.zone;
+      const states = statesOf(engine);
+      assert.ok(states.idle.length >= 1, `${label}: missing idle`);
+      assert.ok(states.it.length >= 1, `${label}: missing IT`);
+      assert.ok(states.shield.length >= 1, `${label}: missing shield`);
+      assert.ok(states.frozen.length >= 1, `${label}: missing frozen`);
+      const sides = { n: 0, e: 0, s: 0, w: 0 };
+      for (const p of Object.values(engine.state.players)) {
+        assert.ok(artInsideZone(p.x, p.y, z), `${label} ${p.name} art left the zone`);
+        if (Math.abs(p.y - (z.y + ART_INSET.top)) < 1.2) sides.n += 1;
+        if (Math.abs(p.y - (z.y + z.h - ART_INSET.bottom)) < 1.2) sides.s += 1;
+        if (Math.abs(p.x - (z.x + ART_INSET.left)) < 1.2) sides.w += 1;
+        if (Math.abs(p.x - (z.x + z.w - ART_INSET.right)) < 1.2) sides.e += 1;
+      }
+      assert.ok(sides.n >= 1 && sides.e >= 1 && sides.s >= 1 && sides.w >= 1, `${label} sides ${JSON.stringify(sides)}`);
+    };
+
+    const walls = new TagEngine({ roundLength: 40, shrinkInterval: 40, rand: rng(17) });
+    walls.addPlayer({ name: "Ada", avatar: "bunny" });
+    walls.spawnBots(15);
+    walls.start();
+    walls.pinArt();
+    walls.tick(0.05);
+    assertPinned(walls, "full zone");
+
+    const tiny = new TagEngine({ roundLength: 40, shrinkInterval: 40, rand: rng(18) });
+    tiny.addPlayer({ name: "Ada", avatar: "axolotl" });
+    tiny.addPlayer({ name: "Nibbly", avatar: "bunny" });
+    tiny.addPlayer({ name: "Pixel", avatar: "fox" });
+    tiny.addPlayer({ name: "Vector", avatar: "penguin" });
+    tiny.start();
+    tiny.pinArt({ minZone: true });
+    tiny.tick(0.05);
+    const min = minZoneSize(4);
+    assert.ok(Math.abs(tiny.state.zone.w - min.w) < 1);
+    assertPinned(tiny, "min zone");
   });
 
   it("separates lobby spawns so critters do not overlap", () => {

@@ -4,6 +4,8 @@ export const TICK_DT = 1 / TICK_HZ;
 
 export const ARENA_W = 1600;
 export const ARENA_H = 900;
+/** Direction A IT chrome: flame, crown, and name pill. Never hue-rotate this. */
+export const IT_ORANGE = "#E8542F";
 
 /** Baseline the original art insets and HUD sizes were measured at. */
 export const PLAYER_RADIUS_MEASURE = 36;

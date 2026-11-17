@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -10 80 80">
+  <defs>
+    <radialGradient id="itFlame" cx="50%" cy="58%" r="60%">
+      <stop offset="55%" stop-color="#F7A33B" />
+      <stop offset="100%" stop-color="#E8542F" />
+    </radialGradient>
+  </defs>
+  <path
+    d="M32.0 -3.0Q36.3 -0.2 39.6 10.1Q47.4 3.8 51.9 4.1Q54.5 8.2 52.4 18.0Q60.4 17.7 62.3 21.2Q63.9 25.2 58.7 31.3Q63.6 35.3 61.7 39.3Q62.4 43.4 56.6 45.8Q58.5 52.0 54.7 54.6Q52.9 58.2 46.6 56.8Q44.9 63.3 40.5 63.8Q36.7 65.6 32.0 60.9Q27.3 65.6 23.5 63.8Q19.1 63.3 17.4 56.8Q11.1 58.2 9.3 54.6Q5.5 52.0 7.4 45.8Q1.6 43.4 2.3 39.3Q0.4 35.3 5.3 31.3Q0.1 25.2 1.7 21.2Q3.6 17.7 11.6 18.0Q9.5 8.2 12.1 4.1Q16.6 3.8 24.4 10.1Q27.7 -0.2 32.0 -3.0Z"
+    fill="url(#itFlame)"
+    stroke="#E8542F"
+    stroke-width="1.5"
+    vector-effect="non-scaling-stroke"
+    stroke-linejoin="round"
+  />
+</svg>

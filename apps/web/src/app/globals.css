@@ -7,7 +7,7 @@
   --muted: #66666c;
   --hair: #e2e1db;
   --line: #1d1d1f;
-  --it: #d2461d;
+  --it: #e8542f;
   --accent: #e8542f;
   --safe: #1e9e6a;
   --zone: #e8542f;
@@ -273,7 +273,7 @@ input[type="radio"] {
 }
 
 .btn-it {
-  background: #d2461d;
+  background: var(--it);
   color: #fff;
 }
 
@@ -442,9 +442,9 @@ h2,
 }
 
 .player-label.it-label {
-  background: #d2461d;
+  background: #e8542f;
   color: #fff;
-  border-color: #d2461d;
+  border-color: #e8542f;
 }
 
 .player-label.join-flash {

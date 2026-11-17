@@ -116,7 +116,12 @@ function Board({
                   }}
                 >
                   {pin.id === "shield" && <span className="shield-ring" />}
-                  <Critter avatar={pin.avatar} radius={PLAYER_RADIUS} {...pin.flags} />
+                  <Critter
+                    avatar={pin.avatar}
+                    radius={PLAYER_RADIUS}
+                    tint={pin.id === "it" ? 1 : 0}
+                    {...pin.flags}
+                  />
                 </div>
               </div>
             </div>

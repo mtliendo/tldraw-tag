@@ -24,14 +24,17 @@ import {
   SPEEDSTER_MULTIPLIER,
   TAG_COOLDOWN,
   TAG_DISTANCE,
+  TICK_DT,
   WALL_LIFETIME,
   WALL_PLACE_OFFSET,
   WALL_THICKNESS,
   WALL_WIDTH,
   ZONE_INSET,
-  ZONE_MIN_H,
-  ZONE_MIN_W,
+  MAX_DISPLACE_PER_SEC,
+  SEPARATION_ITERS,
+  SEPARATION_STIFFNESS,
   ZONE_SHRINK_DURATION,
+  minZoneSize,
 } from "./constants";
 import { AVATARS } from "./avatars";
 import { pickWeightedPower, POWER_UPS, type PowerId } from "./powerups";
@@ -93,6 +96,7 @@ export class TagEngine {
   inputs = new Map<string, InputState>();
   private rand: () => number;
   private seq = 0;
+  private dt = TICK_DT;
 
   constructor(opts?: {
     code?: string;
@@ -192,10 +196,14 @@ export class TagEngine {
   }
 
   removePlayer(id: string) {
+    const leaving = this.state.players[id];
+    if (!leaving) return;
     const wasIt = this.state.itId === id;
+    const lx = leaving.x;
+    const ly = leaving.y;
     delete this.state.players[id];
     this.inputs.delete(id);
-    if (wasIt) this.pickIt();
+    if (wasIt) this.passItToNearest(lx, ly);
   }
 
   spawnBots(count: number) {
@@ -350,6 +358,7 @@ export class TagEngine {
   }
 
   tick(dt: number) {
+    this.dt = dt;
     this.state.events = [];
     if (this.state.phase !== "playing") {
       this.refreshLeaderboard();
@@ -383,7 +392,7 @@ export class TagEngine {
       timeLeft: s.timeLeft,
       roundLength: s.roundLength,
       zone: s.zone,
-      targetZone: s.shrinkEndsAt > s.now ? s.targetZone : nextZone(s.zone),
+      targetZone: s.shrinkEndsAt > s.now ? s.targetZone : nextZone(s.zone, Object.keys(s.players).length),
       shrinkIn:
         s.phase === "playing" && s.shrinkEndsAt <= s.now ? Math.max(0, s.nextShrinkAt - s.now) : 0,
       shrinking: s.phase === "playing" && s.shrinkEndsAt > s.now,
@@ -484,6 +493,29 @@ export class TagEngine {
     this.state.itId = choice.id;
   }
 
+  private passItToNearest(x: number, y: number) {
+    const players = Object.values(this.state.players);
+    for (const p of players) p.isIt = false;
+    if (players.length === 0) {
+      this.state.itId = "";
+      return;
+    }
+    let best = players[0];
+    let bestD = dist(best.x, best.y, x, y);
+    for (const p of players) {
+      const d = dist(p.x, p.y, x, y);
+      if (d < bestD) {
+        best = p;
+        bestD = d;
+      }
+    }
+    best.isIt = true;
+    this.state.itId = best.id;
+    if (this.state.phase === "playing") {
+      this.push({ type: "announce", text: `${best.name} is IT` });
+    }
+  }
+
   private tickZone() {
     const s = this.state;
     if (s.shrinkEndsAt > s.now) {
@@ -493,7 +525,7 @@ export class TagEngine {
       s.zone = lerpRect(s.fromZone, s.targetZone, eased);
     } else if (s.now >= s.nextShrinkAt) {
       s.fromZone = { ...s.zone };
-      s.targetZone = nextZone(s.zone);
+      s.targetZone = nextZone(s.zone, Object.keys(s.players).length);
       s.shrinkEndsAt = s.now + ZONE_SHRINK_DURATION;
       s.nextShrinkAt = s.now + s.shrinkInterval;
       this.push({ type: "shrink" });
@@ -587,58 +619,70 @@ export class TagEngine {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       if (!p.isIt) p.score += dt;
+      if (p.ghostUntil <= s.now) this.collideWalls(p);
+      this.clampPlayer(p);
     }
-    this.constrainBodies();
   }
 
   private constrainBodies() {
-    for (let i = 0; i < 10; i++) {
-      this.separatePlayers();
-      for (const p of Object.values(this.state.players)) {
-        if (p.ghostUntil <= this.state.now) this.collideWalls(p);
-        this.clampPlayer(p);
-      }
-    }
-  }
-
-  private separatePlayers() {
     const list = Object.values(this.state.players);
+    if (list.length === 0) return;
+    const now = this.state.now;
+    for (const p of list) {
+      if (p.ghostUntil <= now) this.collideWalls(p);
+      this.clampPlayer(p);
+    }
+    const origin = new Map(list.map((p) => [p.id, { x: p.x, y: p.y }]));
     const minDist = PLAYER_SEPARATION;
-    const z = this.state.zone;
-    const x0 = z.x + ZONE_INSET;
-    const x1 = z.x + z.w - ZONE_INSET;
-    const y0 = z.y + ZONE_INSET;
-    const y1 = z.y + z.h - ZONE_INSET;
-    for (let pass = 0; pass < 6; pass++) {
+    for (let iter = 0; iter < SEPARATION_ITERS; iter++) {
+      const corr = new Map(list.map((p) => [p.id, { x: 0, y: 0 }]));
       for (let i = 0; i < list.length; i++) {
         const a = list[i];
-        if (a.ghostUntil > this.state.now) continue;
+        if (a.ghostUntil > now) continue;
         for (let j = i + 1; j < list.length; j++) {
           const b = list[j];
-          if (b.ghostUntil > this.state.now) continue;
+          if (b.ghostUntil > now) continue;
           let dx = a.x - b.x;
           let dy = a.y - b.y;
           let d = Math.hypot(dx, dy);
           if (d < 1e-4) {
-            dx = (i % 2 === 0 ? 1 : -1) * 0.85;
-            dy = (j % 2 === 0 ? 1 : -1) * 0.15;
+            dx = ((i + iter) % 2 === 0 ? 1 : -1) * 0.85;
+            dy = ((j + iter) % 2 === 0 ? 1 : -1) * 0.15;
             d = Math.hypot(dx, dy);
           }
           if (d >= minDist) continue;
-          const push = (minDist - d) / 2;
-          let ux = dx / d;
-          let uy = dy / d;
-          const yRoom = Math.min(a.y - y0, y1 - a.y, b.y - y0, y1 - b.y);
-          if (yRoom < PLAYER_RADIUS * 0.35) {
-            ux = dx === 0 ? (a.id > b.id ? 1 : -1) : Math.sign(dx) || 1;
-            uy = 0;
-          }
-          a.x = clamp(a.x + ux * push, x0, x1);
-          a.y = clamp(a.y + uy * push, y0, y1);
-          b.x = clamp(b.x - ux * push, x0, x1);
-          b.y = clamp(b.y - uy * push, y0, y1);
+          const push = ((minDist - d) / 2) * SEPARATION_STIFFNESS;
+          const ux = dx / d;
+          const uy = dy / d;
+          const ca = corr.get(a.id)!;
+          const cb = corr.get(b.id)!;
+          ca.x += ux * push;
+          ca.y += uy * push;
+          cb.x -= ux * push;
+          cb.y -= uy * push;
         }
       }
+      for (const p of list) {
+        const c = corr.get(p.id)!;
+        p.x += c.x;
+        p.y += c.y;
+        if (p.ghostUntil <= now) this.collideWalls(p);
+        this.clampPlayer(p);
+      }
+    }
+    const cap = MAX_DISPLACE_PER_SEC * this.dt;
+    for (const p of list) {
+      const o = origin.get(p.id)!;
+      const dx = p.x - o.x;
+      const dy = p.y - o.y;
+      const d = Math.hypot(dx, dy);
+      if (d > cap && d > 1e-6) {
+        const s = cap / d;
+        p.x = o.x + dx * s;
+        p.y = o.y + dy * s;
+      }
+      if (p.ghostUntil <= now) this.collideWalls(p);
+      this.clampPlayer(p);
     }
   }
 
@@ -1004,12 +1048,18 @@ export class TagEngine {
   }
 }
 
-function nextZone(zone: Rect): Rect {
+function nextZone(zone: Rect, playerCount: number): Rect {
+  const min = minZoneSize(playerCount);
+  const w = Math.max(min.w, zone.w * 0.78);
+  const h = Math.max(min.h, zone.h * 0.78);
   const cx = zone.x + zone.w / 2;
   const cy = zone.y + zone.h / 2;
-  const w = Math.max(ZONE_MIN_W, zone.w * 0.78);
-  const h = Math.max(ZONE_MIN_H, zone.h * 0.78);
-  return { x: cx - w / 2, y: cy - h / 2, w, h };
+  return {
+    x: clamp(cx - w / 2, 0, ARENA_W - w),
+    y: clamp(cy - h / 2, 0, ARENA_H - h),
+    w,
+    h,
+  };
 }
 
 function sanitizeName(name: string): string {

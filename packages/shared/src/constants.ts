@@ -26,9 +26,16 @@ export const MAX_ROUND_LENGTH = 180;
 export const DEFAULT_SHRINK_INTERVAL = 10;
 export const ZONE_MIN_W = 320;
 export const ZONE_MIN_H = 180;
+export const ZONE_ASPECT = 16 / 9;
+export const ZONE_PACK_FACTOR = 2.5;
+export const ZONE_CELL_GAP = 12;
 export const ZONE_SHRINK_DURATION = 1.6;
 export const ZONE_WARN_SECONDS = 2.5;
 export const ZONE_INSET = PLAYER_RADIUS + 2;
+export const SEPARATION_ITERS = 8;
+export const SEPARATION_STIFFNESS = 0.45;
+export const MAX_DISPLACE_PER_SEC = 720;
+export const RECONNECT_GRACE_S = 10;
 
 export const POWER_SPAWN_MIN = 2.2;
 export const POWER_SPAWN_MAX = 4.8;
@@ -55,3 +62,26 @@ export const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export const ROOM_CODE_LENGTH = 4;
 
 export const INTERP_DELAY_MS = 80;
+
+/** Smallest 16:9 zone that can hold `n` blobs at comfortable spacing. */
+export function minZoneSize(playerCount: number): { w: number; h: number } {
+  const n = Math.max(1, playerCount);
+  const cell = PLAYER_SEPARATION + ZONE_CELL_GAP;
+  const interior = n * cell * cell * ZONE_PACK_FACTOR;
+  const pad = ZONE_INSET * 2;
+  const fits = (w: number) => {
+    const h = w / ZONE_ASPECT;
+    return Math.max(0, w - pad) * Math.max(0, h - pad) >= interior && h >= ZONE_MIN_H;
+  };
+  if (!fits(ARENA_W)) return { w: ARENA_W, h: ARENA_H };
+  let lo = ZONE_MIN_W;
+  let hi = ARENA_W;
+  while (hi - lo > 0.5) {
+    const mid = (lo + hi) / 2;
+    if (fits(mid)) hi = mid;
+    else lo = mid;
+  }
+  const w = Math.min(ARENA_W, Math.max(ZONE_MIN_W, hi));
+  const h = Math.min(ARENA_H, Math.max(ZONE_MIN_H, w / ZONE_ASPECT));
+  return { w, h };
+}

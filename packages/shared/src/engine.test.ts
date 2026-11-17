@@ -4,6 +4,7 @@ import { TagEngine } from "./engine";
 import {
   ARENA_H,
   ARENA_W,
+  MAX_DISPLACE_PER_SEC,
   PLAYER_RADIUS,
   PLAYER_SEPARATION,
   POWER_RADIUS,
@@ -12,6 +13,7 @@ import {
   ZONE_INSET,
   ZONE_MIN_H,
   ZONE_MIN_W,
+  minZoneSize,
 } from "./constants";
 import { circleHitsAabb, dist, rng } from "./ids";
 
@@ -38,6 +40,9 @@ describe("TagEngine loop", () => {
     assert.equal(engine.state.phase, "ended");
     assert.ok(engine.state.zone.w < startZone.w);
     assert.ok(engine.state.zone.h < startZone.h);
+    const min = minZoneSize(Object.keys(engine.state.players).length);
+    assert.ok(engine.state.zone.w >= min.w - 1);
+    assert.ok(engine.state.zone.h >= min.h - 1);
     assert.ok(engine.state.zone.w >= ZONE_MIN_W - 1);
     assert.ok(engine.state.zone.h >= ZONE_MIN_H - 1);
     assert.ok(engine.state.leaderboard.length >= 11);
@@ -295,5 +300,89 @@ describe("TagEngine loop", () => {
         );
       }
     }
+  });
+
+  it("scales the minimum zone with player count", () => {
+    const two = minZoneSize(2);
+    const fourteen = minZoneSize(14);
+    const thirty = minZoneSize(30);
+    assert.ok(fourteen.w > two.w + 40);
+    assert.ok(thirty.w > fourteen.w + 40);
+    assert.ok(Math.abs(fourteen.w / fourteen.h - 16 / 9) < 0.02);
+    assert.ok(thirty.w <= ARENA_W);
+    assert.ok(thirty.h <= ARENA_H);
+  });
+
+  it("passes IT to the nearest remaining player when IT leaves", () => {
+    const engine = new TagEngine({ roundLength: 20, rand: rng(2) });
+    const a = engine.addPlayer({ id: "a", name: "Ada", avatar: "bolt" });
+    const b = engine.addPlayer({ id: "b", name: "Bea", avatar: "orb" });
+    const c = engine.addPlayer({ id: "c", name: "Cyd", avatar: "fox" });
+    engine.start();
+    a.isIt = true;
+    b.isIt = false;
+    c.isIt = false;
+    engine.state.itId = a.id;
+    a.x = 400;
+    a.y = 400;
+    b.x = 460;
+    b.y = 410;
+    c.x = 900;
+    c.y = 700;
+    engine.removePlayer(a.id);
+    assert.equal(engine.state.itId, b.id);
+    assert.equal(b.isIt, true);
+    assert.equal(c.isIt, false);
+    assert.equal(engine.state.players[a.id], undefined);
+  });
+
+  it("keeps 30 players from overlapping or teleporting through a full shrink", () => {
+    const engine = new TagEngine({
+      roundLength: 16,
+      shrinkInterval: 3,
+      enabledPowers: ["speedster", "shield"],
+      rand: rng(30),
+    });
+    for (let i = 0; i < 30; i++) {
+      engine.addPlayer({ name: `P${i}`, avatar: "bolt", isBot: i > 0 });
+    }
+    engine.start();
+    const dt = 0.05;
+    const cap = MAX_DISPLACE_PER_SEC * dt + PLAYER_RADIUS;
+    let maxStep = 0;
+    let prev = Object.fromEntries(
+      Object.values(engine.state.players).map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
+    for (let i = 0; i < 400 && engine.state.phase !== "ended"; i++) {
+      engine.tick(dt);
+      for (const p of Object.values(engine.state.players)) {
+        const o = prev[p.id];
+        if (!o) continue;
+        const step = dist(p.x, p.y, o.x, o.y);
+        if (step > maxStep) maxStep = step;
+        assert.ok(step <= cap + 0.5, `${p.name} jumped ${step.toFixed(1)}px at tick ${i}`);
+      }
+      prev = Object.fromEntries(
+        Object.values(engine.state.players).map((p) => [p.id, { x: p.x, y: p.y }]),
+      );
+    }
+    assert.equal(engine.state.phase, "ended");
+    const n = Object.keys(engine.state.players).length;
+    assert.equal(n, 30);
+    const min = minZoneSize(n);
+    assert.ok(engine.state.zone.w >= min.w - 1);
+    assert.ok(engine.state.zone.h >= min.h - 1);
+    const players = Object.values(engine.state.players);
+    for (let a = 0; a < players.length; a++) {
+      if (players[a].ghostUntil > engine.state.now) continue;
+      for (let b = a + 1; b < players.length; b++) {
+        if (players[b].ghostUntil > engine.state.now) continue;
+        assert.ok(
+          dist(players[a].x, players[a].y, players[b].x, players[b].y) >= PLAYER_SEPARATION - 1.5,
+          `${players[a].name} overlapped ${players[b].name} at the final zone`,
+        );
+      }
+    }
+    assert.ok(maxStep < cap, `max per-tick displacement ${maxStep.toFixed(1)} exceeded ${cap}`);
   });
 });

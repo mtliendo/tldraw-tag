@@ -2,6 +2,7 @@ import { Client, Room } from "colyseus";
 import {
   MAX_PLAYERS,
   POWER_IDS,
+  RECONNECT_GRACE_S,
   TagEngine,
   isPowerId,
   type PowerId,
@@ -118,14 +119,24 @@ export class TagRoom extends Room<{ state: GameState }> {
     this.sync();
   }
 
-  onLeave(client: Client) {
+  async onDrop(client: Client) {
+    if (client.userData?.role !== "player") return;
+    if (this.engine.state.phase === "lobby") return;
     const player = this.playerFor(client);
-    if (player && this.engine.state.phase === "lobby") {
-      this.engine.removePlayer(player.id);
-      this.sync();
-    } else if (player) {
-      player.sessionId = "";
+    if (!player) return;
+    try {
+      await this.allowReconnection(client, RECONNECT_GRACE_S);
+    } catch {
+      // onLeave removes the blob after the grace period
     }
+  }
+
+  onLeave(client: Client) {
+    if (client.userData?.role !== "player") return;
+    const player = this.playerFor(client);
+    if (!player) return;
+    this.engine.removePlayer(player.id);
+    this.sync();
   }
 
   private async handleAdmin(message: { action?: string; [k: string]: unknown }) {

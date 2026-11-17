@@ -58,6 +58,7 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
+  min-height: 100dvh;
   background: var(--page);
   color: var(--ink);
   font-family: var(--font-body);
@@ -142,6 +143,50 @@ input[type="radio"] {
 
 .board-wrap.interactive .tl-container {
   pointer-events: auto;
+}
+
+.play-hud-landscape {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  pointer-events: none;
+  padding: max(6px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) 0
+    max(8px, env(safe-area-inset-left, 0px));
+}
+
+.play-hud-landscape > * {
+  pointer-events: auto;
+}
+
+.play-dock-landscape {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+  background: transparent;
+  border: none;
+  min-height: 0;
+  padding: 0 max(10px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px))
+    max(10px, env(safe-area-inset-left, 0px));
+}
+
+.play-dock-landscape > * {
+  pointer-events: auto;
+}
+
+.joy-overlay,
+.power-overlay {
+  background: color-mix(in srgb, var(--paper) 78%, transparent) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 rgba(29, 29, 31, 0.06), 0 8px 18px -12px rgba(29, 29, 31, 0.35);
 }
 
 .board-wrap a[href*="tldraw"],
@@ -376,18 +421,19 @@ h2,
   letter-spacing: 0;
   font-size: calc(14px * var(--inkt-label-scale, 1));
   font-weight: 600;
-  padding: calc(5px * var(--inkt-label-scale, 1)) calc(9px * var(--inkt-label-scale, 1));
+  padding: calc(5px * var(--inkt-label-scale, 1)) calc(10px * var(--inkt-label-scale, 1));
   border-radius: 999px;
   border: 1px solid #dad9d2;
   background: #ffffff;
   color: #1d1d1f;
   box-shadow: 0 1px 2px rgba(29, 29, 31, 0.08);
-  max-width: calc(132px * var(--inkt-label-scale, 1));
+  max-width: calc(168px * var(--inkt-label-scale, 1));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   box-sizing: border-box;
   line-height: 1.2;
+  z-index: 5;
 }
 
 .player-label.you-label {

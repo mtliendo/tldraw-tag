@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Shantell_Sans } from "next/font/google";
 import { Auth0Provider } from "@auth0/nextjs-auth0/client";
 import { auth0 } from "@/lib/auth0";
@@ -17,6 +17,15 @@ const ui = Inter({
 });
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || "http://localhost:3000";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#F1F0EC",
+};
 
 export const metadata: Metadata = {
   title: "INK TAG — live audience tag on a tldraw canvas",

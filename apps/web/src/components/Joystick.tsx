@@ -6,11 +6,13 @@ import { CritterThumb } from "@/components/Critter";
 export function Joystick({
   onChange,
   compact = false,
+  overlay = false,
   avatar,
   tint = 0,
 }: {
   onChange: (x: number, y: number) => void;
   compact?: boolean;
+  overlay?: boolean;
   avatar?: string;
   tint?: number;
 }) {
@@ -43,8 +45,8 @@ export function Joystick({
     onChange(0, 0);
   };
 
-  const size = compact ? 126 : 156;
-  const knobSize = compact ? 52 : 64;
+  const size = overlay ? 108 : compact ? 126 : 156;
+  const knobSize = overlay ? 46 : compact ? 52 : 64;
 
   return (
     <div
@@ -60,11 +62,12 @@ export function Joystick({
       }}
       onPointerUp={end}
       onPointerCancel={end}
+      className={overlay ? "joy-overlay" : undefined}
       style={{
         width: size,
         height: size,
         borderRadius: "50%",
-        background: "#F1F0EC",
+        background: overlay ? undefined : "#F1F0EC",
         border: "1.5px solid var(--line)",
         position: "relative",
         touchAction: "none",
@@ -97,9 +100,10 @@ export function Joystick({
           position: "absolute",
           left: 0,
           right: 0,
-          bottom: -20,
+          bottom: overlay ? 6 : -20,
           textAlign: "center",
           color: "var(--muted)",
+          display: overlay ? "none" : undefined,
         }}
       >
         move

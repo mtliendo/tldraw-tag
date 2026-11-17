@@ -43,6 +43,7 @@ export type EnginePlayer = {
   isIt: boolean;
   isBot: boolean;
   score: number;
+  tags: number;
   powerId: PowerId | "";
   charges: number;
   speedUntil: number;

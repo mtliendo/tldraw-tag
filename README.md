@@ -8,7 +8,7 @@ The whole UI is Direction A (Clean tldraw): off-white dot-grid paper, Shantell S
 
 ## What it is
 
-A developer-advocate conference demo: twenty-plus people in a hall scan a QR, drop a name, and play tag. The server assigns each player a critter (all 13 before any repeats). Power-ups spawn in the zone. Whoever is **IT** when the timer hits zero loses. Score is time spent *not* being IT.
+A developer-advocate conference demo: twenty-plus people in a hall scan a QR, drop a name, and play tag. The server assigns each player a critter (all 13 before any repeats). Power-ups spawn in the zone. Whoever is **IT** when the timer hits zero loses. Score is time spent as IT; lowest wins.
 
 | Role | Route | Auth |
 | --- | --- | --- |
@@ -208,3 +208,17 @@ Do not enable `DEV_BYPASS_AUTH` on Railway.
 ![Projector view](docs/screenshots/07-projector.png)
 
 ![20-player projector](docs/screenshots/08-projector-20.png)
+
+![Phone lobby landscape (iPhone)](docs/screenshots/09-player-iphone-landscape-lobby.png)
+
+![Phone lobby landscape (Android)](docs/screenshots/09b-player-android-landscape-lobby.png)
+
+![Phone play landscape (iPhone)](docs/screenshots/10-player-iphone-landscape.png)
+
+![Phone play landscape (Android)](docs/screenshots/10b-player-android-landscape.png)
+
+![Phone rotate to landscape](docs/screenshots/10c-player-rotate-landscape.png)
+
+![Phone end landscape (iPhone)](docs/screenshots/11-player-iphone-landscape-end.png)
+
+![Phone end landscape (Android)](docs/screenshots/11b-player-android-landscape-end.png)

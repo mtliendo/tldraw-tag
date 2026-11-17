@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { minZoneSize } from "@inkt/shared";
-import { crowdLabelScale, layoutPlayers, liveLabelScale } from "./layoutPlayers";
+import { crowdLabelScale, layoutPlayers, liveLabelScale, shortPlayerName } from "./layoutPlayers";
 import type { ViewPlayer } from "./types";
 
 function player(i: number, x: number, y: number, extra: Partial<ViewPlayer> = {}): ViewPlayer {
@@ -115,6 +115,42 @@ describe("layoutPlayers", () => {
         h: p.labelH,
       };
       assert.equal(hits(label, hole), false, `${p.name} sat under the leaderboard`);
+    }
+  });
+
+  it("keeps names up to 10 characters and ellipsizes longer ones", () => {
+    assert.equal(shortPlayerName("Ada"), "Ada");
+    assert.equal(shortPlayerName("Graphite"), "Graphite");
+    assert.equal(shortPlayerName("Scribble"), "Scribble");
+    assert.equal(shortPlayerName("Nibbly"), "Nibbly");
+    assert.equal(shortPlayerName("Scribbleton"), "Scribblet…");
+    const laid = layoutPlayers(
+      [player(0, 500, 300, { name: "Graphite" }), player(1, 620, 300, { name: "Scribble" })],
+      { x: 0, y: 0, w: 900, h: 600 },
+      1,
+    );
+    for (const p of laid) {
+      assert.ok(p.labelW >= 104, `${p.name} pill too narrow (${p.labelW.toFixed(1)})`);
+    }
+  });
+
+  it("keeps labels off paver walls", () => {
+    const z = { x: 0, y: 0, w: 800, h: 450 };
+    const wall = { x: 360, y: 210, w: 140, h: 26 };
+    const laid = layoutPlayers([player(0, 430, 248, { name: "Graphite" })], z, 1, null, {
+      clamp: z,
+      avoid: [wall],
+    });
+    const hits = (a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) =>
+      a.x < b.x + b.w - 2 && a.x + a.w > b.x + 2 && a.y < b.y + b.h - 2 && a.y + a.h > b.y + 2;
+    for (const p of laid.filter((x) => x.showLabel)) {
+      const label = {
+        x: p.x + p.labelX - p.labelW / 2,
+        y: p.y + p.labelY - p.labelH / 2,
+        w: p.labelW,
+        h: p.labelH,
+      };
+      assert.equal(hits(label, wall), false, `${p.name} sat on a wall`);
     }
   });
 });

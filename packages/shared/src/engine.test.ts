@@ -450,4 +450,116 @@ describe("TagEngine loop", () => {
     assert.equal(again.length, 14);
     assert.equal(new Set(again).size, 13);
   });
+
+  it("ranks by time as IT, then fewer tags", () => {
+    const engine = new TagEngine({ roundLength: 30, shrinkInterval: 30, rand: rng(5) });
+    const ada = engine.addPlayer({ id: "a", name: "Ada", avatar: "bolt" });
+    const toner = engine.addPlayer({ id: "t", name: "Toner", avatar: "orb" });
+    const graphite = engine.addPlayer({ id: "g", name: "Graphite", avatar: "fox" });
+    engine.start();
+    for (const p of Object.values(engine.state.players)) {
+      p.isIt = false;
+      p.score = 0;
+      p.tags = 0;
+      p.vx = 0;
+      p.vy = 0;
+      engine.setInput(p.id, { x: 0, y: 0, usePower: false });
+    }
+    ada.isIt = true;
+    engine.state.itId = ada.id;
+    ada.x = 420;
+    ada.y = 400;
+    toner.x = 780;
+    toner.y = 400;
+    graphite.x = 420;
+    graphite.y = 720;
+    ada.lastTaggedAt = -10;
+    for (let i = 0; i < 40; i++) engine.tick(0.05);
+    toner.x = ada.x + 18;
+    toner.y = ada.y;
+    ada.lastTaggedAt = -10;
+    engine.tick(0.05);
+    assert.equal(engine.state.itId, toner.id);
+    assert.equal(toner.tags, 1);
+    toner.x = 780;
+    toner.y = 400;
+    for (let i = 0; i < 80; i++) engine.tick(0.05);
+    engine.state.timeLeft = 0;
+    engine.tick(0.05);
+    assert.equal(engine.state.phase, "ended");
+    const board = engine.state.leaderboard;
+    assert.equal(board[0].name, "Graphite");
+    const adaRow = board.find((row) => row.name === "Ada")!;
+    const tonerRow = board.find((row) => row.name === "Toner")!;
+    assert.ok(adaRow.score > 1.5 && adaRow.score < 2.6, `Ada IT time ${adaRow.score}`);
+    assert.ok(tonerRow.score > adaRow.score, `Toner ${tonerRow.score} should exceed Ada ${adaRow.score}`);
+    assert.equal(board[board.length - 1].name, "Toner");
+  });
+
+  it("breaks equal IT time with fewer tags first", () => {
+    const engine = new TagEngine({ roundLength: 20, shrinkInterval: 30, rand: rng(8) });
+    engine.addPlayer({ id: "a", name: "Ada", avatar: "bolt" });
+    engine.addPlayer({ id: "b", name: "Bea", avatar: "orb" });
+    engine.addPlayer({ id: "c", name: "Cyd", avatar: "fox" });
+    engine.start();
+    const ada = engine.state.players.a;
+    const bea = engine.state.players.b;
+    const cyd = engine.state.players.c;
+    for (const p of [ada, bea, cyd]) {
+      p.isIt = false;
+      p.vx = 0;
+      p.vy = 0;
+      engine.setInput(p.id, { x: 0, y: 0, usePower: false });
+    }
+    cyd.isIt = true;
+    engine.state.itId = cyd.id;
+    ada.score = 3;
+    ada.tags = 2;
+    bea.score = 3;
+    bea.tags = 0;
+    cyd.score = 8;
+    cyd.tags = 1;
+    engine.state.timeLeft = 0;
+    engine.tick(0.05);
+    assert.equal(engine.state.leaderboard[0].name, "Bea");
+    assert.equal(engine.state.leaderboard[1].name, "Ada");
+    assert.equal(engine.state.leaderboard[2].name, "Cyd");
+  });
+
+  it("clamps frozen overlays inside the zone with extra inset", () => {
+    const engine = new TagEngine({ roundLength: 20, shrinkInterval: 30, rand: rng(12) });
+    engine.addPlayer({ name: "Ada", avatar: "bolt" });
+    engine.spawnBots(6);
+    engine.start();
+    engine.showcase();
+    const frozen = Object.values(engine.state.players).find((p) => p.frozenUntil > engine.state.now);
+    assert.ok(frozen, "showcase should freeze someone");
+    const z = engine.state.zone;
+    frozen!.x = z.x + z.w / 2;
+    frozen!.y = z.y;
+    engine.tick(0.05);
+    const extra = 16;
+    assert.ok(frozen!.y >= z.y + ZONE_INSET + extra - 0.5, `frozen y ${frozen!.y} vs ${z.y + ZONE_INSET + extra}`);
+    assert.ok(frozen!.y <= z.y + z.h - ZONE_INSET - extra + 0.5);
+    frozen!.x = z.x;
+    engine.tick(0.05);
+    assert.ok(frozen!.x >= z.x + ZONE_INSET + extra - 0.5);
+  });
+
+  it("separates lobby spawns so critters do not overlap", () => {
+    const engine = new TagEngine({ rand: rng(3) });
+    const names = ["Ada", "Nibster", "Mia", "Sketch", "Graphite", "Stamp", "Raster", "Ink", "Paste", "Pixel"];
+    for (const name of names) engine.addPlayer({ name, avatar: "bolt" });
+    for (let i = 0; i < 6; i++) engine.tick(0.05);
+    assert.equal(engine.state.phase, "lobby");
+    const players = Object.values(engine.state.players);
+    for (let a = 0; a < players.length; a++) {
+      for (let b = a + 1; b < players.length; b++) {
+        assert.ok(
+          dist(players[a].x, players[a].y, players[b].x, players[b].y) >= PLAYER_SEPARATION - 1.5,
+          `${players[a].name} overlapped ${players[b].name} in lobby`,
+        );
+      }
+    }
+  });
 });

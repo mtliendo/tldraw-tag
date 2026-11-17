@@ -3,58 +3,113 @@
 import { avatarTintIndex, formatTime } from "@inkt/shared";
 import type { ViewState } from "@/game/types";
 import { CritterThumb } from "@/components/Critter";
+import { shortPlayerName } from "@/game/layoutPlayers";
 
 export function Leaderboard({
   view,
   overlay = false,
   compact = false,
+  landscape = false,
+  selfId,
 }: {
   view: ViewState;
   overlay?: boolean;
   compact?: boolean;
+  landscape?: boolean;
+  selfId?: string | null;
 }) {
   if (view.phase !== "ended" && !overlay) return null;
   const rows = view.leaderboard;
-  const cols = compact ? (rows.length >= 8 ? 2 : 1) : rows.length >= 8 ? 2 : 1;
+  const cols = compact && !landscape ? 1 : rows.length >= 8 ? 2 : 1;
   const winner = rows[0];
+  const selfIndex = selfId ? rows.findIndex((row) => row.id === selfId) : -1;
+  const selfRow = selfIndex >= 0 ? rows[selfIndex] : null;
+  const nameMax = compact ? 12 : 16;
+
   return (
     <div
       className="panel"
       style={{
         display: "flex",
         flexDirection: "column",
-        flex: compact ? "0 1 auto" : undefined,
-        alignSelf: compact ? "center" : undefined,
-        padding: compact ? 12 : 22,
+        flex: compact ? "1 1 auto" : undefined,
+        alignSelf: compact ? "stretch" : undefined,
+        padding: landscape ? 10 : compact ? 12 : 22,
         minWidth: compact ? 0 : cols === 2 ? 640 : 320,
-        maxWidth: compact ? 420 : cols === 2 ? 1040 : 520,
+        maxWidth: compact ? "100%" : cols === 2 ? 1040 : 520,
         width: compact ? "100%" : cols === 2 ? "min(1040px, 92vw)" : undefined,
-        maxHeight: compact ? "min(46dvh, 280px)" : "78vh",
+        maxHeight: compact ? "100%" : "78vh",
         minHeight: 0,
-        overflow: "auto",
+        overflow: "hidden",
         background: overlay ? "#fff" : undefined,
       }}
     >
       <div
         style={{
-          position: "sticky",
-          top: compact ? -12 : -22,
-          margin: compact ? "-12px -12px 8px" : "-22px -22px 12px",
-          padding: compact ? "12px 12px 8px" : "22px 22px 10px",
+          flex: "0 0 auto",
+          paddingBottom: compact ? 8 : 10,
           background: "#fff",
-          zIndex: 1,
         }}
       >
         <div className="kicker">round over · {rows.length} players</div>
-        <h2 style={{ fontSize: compact ? 22 : 40, margin: "6px 0 0" }}>
-          {winner ? `${winner.name} wins!` : view.itName ? `${view.itName} was IT` : "Round over"}
+        <h2 style={{ fontSize: landscape ? 18 : compact ? 22 : 40, margin: landscape ? "2px 0 0" : "6px 0 0" }}>
+          {winner ? `${shortPlayerName(winner.name, nameMax)} wins!` : view.itName ? `${view.itName} was IT` : "Round over"}
         </h2>
-        {!compact && (
-          <p className="muted" style={{ margin: "6px 0 0" }}>
-            Least time spent as IT.
-          </p>
-        )}
+        <p className="muted" style={{ margin: landscape ? "2px 0 0" : "6px 0 0", fontSize: compact ? 12 : 14 }}>
+          Time as IT · lowest wins
+        </p>
       </div>
+      {compact && selfRow && (
+        <div
+          style={{
+            flex: "0 0 auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 0",
+            marginBottom: 4,
+            borderBottom: "1.5px solid var(--line)",
+            fontWeight: 600,
+            fontSize: 14,
+            minWidth: 0,
+          }}
+        >
+          <CritterThumb
+            avatar={selfRow.avatar}
+            size={28}
+            tint={avatarTintIndex(rows, selfRow.id, selfRow.avatar)}
+            isIt={selfRow.isIt}
+          />
+          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            You: #{selfIndex + 1} · {formatTime(selfRow.score)}
+          </span>
+        </div>
+      )}
+      {!compact && (
+        <div
+          className="muted"
+          style={{
+            display: "grid",
+            gridTemplateColumns: cols === 2 ? "1fr 1fr" : "1fr",
+            columnGap: 36,
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            padding: "4px 0 2px",
+            flex: "0 0 auto",
+          }}
+        >
+          {Array.from({ length: cols }, (_, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "28px 40px 1fr 64px", gap: 8 }}>
+              <span />
+              <span />
+              <span>Player</span>
+              <span style={{ textAlign: "right", whiteSpace: "nowrap" }}>IT time</span>
+            </div>
+          ))}
+        </div>
+      )}
       <ol
         style={{
           listStyle: "none",
@@ -64,6 +119,10 @@ export function Leaderboard({
           gridTemplateColumns: cols === 2 ? "1fr 1fr" : "1fr",
           columnGap: compact ? 12 : 36,
           rowGap: 0,
+          overflow: "auto",
+          flex: "1 1 auto",
+          minHeight: 0,
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {rows.map((row, i) => {
@@ -73,14 +132,14 @@ export function Leaderboard({
               key={row.id}
               style={{
                 display: "grid",
-                gridTemplateColumns: compact ? "22px 28px 1fr 44px" : "28px 40px 1fr 56px",
+                gridTemplateColumns: compact ? "28px 28px 1fr 48px" : "28px 40px 1fr 64px",
                 alignItems: "center",
                 gap: compact ? 6 : 8,
-                height: compact ? 36 : 52,
+                height: landscape ? 34 : compact ? 40 : 52,
                 borderBottom: "1px solid var(--hair)",
                 color: row.isIt ? "var(--it)" : "inherit",
                 minWidth: 0,
-                fontSize: compact ? 13 : 17,
+                fontSize: landscape ? 13 : compact ? 14 : 17,
                 fontWeight: 600,
               }}
             >
@@ -95,8 +154,8 @@ export function Leaderboard({
                   fontWeight: 600,
                 }}
               >
-                {row.name}
-                {row.isIt ? "  ·  IT" : ""}
+                {shortPlayerName(row.name, nameMax)}
+                {row.isIt ? " · IT" : ""}
               </strong>
               <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: row.isIt ? "var(--it)" : "var(--muted)" }}>
                 {formatTime(row.score)}

@@ -43,9 +43,15 @@ export function liveLabelScale(
   return s;
 }
 
+export function shortPlayerName(name: string, max = 10) {
+  const trimmed = name.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, Math.max(1, max - 1))}…`;
+}
+
 function labelWidth(name: string, scale: number, kind: "it" | "you" | "plain") {
   const text = kind === "it" ? `IT ${name}` : kind === "you" ? `${name} you` : name;
-  return Math.min(132 * scale, Math.max(36 * scale, (24 + text.length * 8.2) * scale));
+  return Math.min(160 * scale, Math.max(52 * scale, (30 + text.length * 9.6) * scale));
 }
 
 function overlapArea(a: Rect, b: Rect, pad = 0) {
@@ -149,7 +155,7 @@ export function layoutPlayers(
     labelLeader: false,
     labelStack: 0,
     labelW: labelWidth(
-      p.name,
+      shortPlayerName(p.name),
       labelScale,
       p.id === (options?.selfId ?? selfId) ? "you" : p.isIt ? "it" : "plain",
     ),
@@ -201,7 +207,7 @@ export function layoutPlayers(
           score += overlapArea(rect, other, CLEAR) * 7;
         }
         for (const hole of avoid) {
-          score += overlapArea(rect, hole, 8) * 18;
+          score += overlapArea(rect, hole, 10) * 28;
         }
         if (!best || score < best.score) best = { slot, rect, score };
         if (score === 0) break;
@@ -216,7 +222,7 @@ export function layoutPlayers(
 
     const { slot } = best;
     let rect = best.rect;
-    for (const hole of avoid) rect = pushOut(rect, hole, 8, clampTo);
+    for (const hole of avoid) rect = pushOut(rect, hole, 10, clampTo);
     rect = clampRect(rect, clampTo, 4);
     p.labelSide = slot.side;
     p.labelAbove = slot.side === "above";
@@ -227,7 +233,7 @@ export function layoutPlayers(
     taken.push(p);
   }
 
-  separateLabels(taken, laid, clampTo);
+  separateLabels(taken, laid, clampTo, avoid);
 
   return laid;
 }
@@ -241,7 +247,7 @@ function labelBox(p: LaidOutPlayer): Rect {
   };
 }
 
-function separateLabels(taken: LaidOutPlayer[], blobs: LaidOutPlayer[], clampTo: Rect) {
+function separateLabels(taken: LaidOutPlayer[], blobs: LaidOutPlayer[], clampTo: Rect, avoid: Rect[] = []) {
   for (let iter = 0; iter < 8; iter++) {
     for (const p of taken) {
       let rect = labelBox(p);
@@ -258,6 +264,10 @@ function separateLabels(taken: LaidOutPlayer[], blobs: LaidOutPlayer[], clampTo:
         if (overlapArea(rect, blob, 2) === 0) continue;
         rect.x += (rect.x + rect.w / 2 - q.x >= 0 ? 1 : -1) * 5;
         rect.y += (rect.y + rect.h / 2 - q.y >= 0 ? 1 : -1) * 5;
+      }
+      for (const hole of avoid) {
+        if (overlapArea(rect, hole, 4) === 0) continue;
+        rect = pushOut(rect, hole, 10, clampTo);
       }
       rect = clampRect(rect, clampTo, 4);
       p.labelX = rect.x + rect.w / 2 - p.x;

@@ -166,7 +166,8 @@ export class TagEngine {
       throw new Error("Room is full");
     }
     const id = opts.id ?? uid("p");
-    const spawn = this.randomInZone(PLAYER_RADIUS + 8);
+    const guess = this.randomInZone(PLAYER_RADIUS + 8);
+    const spawn = this.clearOfPlayers(guess.x, guess.y, PLAYER_SEPARATION);
     const player: EnginePlayer = {
       id,
       sessionId: opts.sessionId ?? "",
@@ -181,6 +182,7 @@ export class TagEngine {
       isIt: false,
       isBot: Boolean(opts.isBot),
       score: 0,
+      tags: 0,
       powerId: "",
       charges: 0,
       speedUntil: 0,
@@ -198,6 +200,7 @@ export class TagEngine {
     };
     this.state.players[id] = player;
     this.inputs.set(id, { x: 0, y: 0, usePower: false });
+    this.constrainBodies();
     return player;
   }
 
@@ -364,7 +367,10 @@ export class TagEngine {
 
     const players = Object.values(s.players);
     const freezeTarget = players.find((p) => !p.isIt && p.isBot) ?? players.find((p) => !p.isIt);
-    if (freezeTarget) freezeTarget.frozenUntil = s.now + 14;
+    if (freezeTarget) {
+      freezeTarget.frozenUntil = s.now + 14;
+      this.clampPlayer(freezeTarget);
+    }
 
     const humans = players.filter((p) => !p.isBot);
     const holders = humans.length ? humans : players.filter((p) => p !== freezeTarget).slice(0, 1);
@@ -384,6 +390,7 @@ export class TagEngine {
     this.dt = dt;
     this.state.events = [];
     if (this.state.phase !== "playing") {
+      this.constrainBodies();
       this.refreshLeaderboard();
       return;
     }
@@ -480,6 +487,7 @@ export class TagEngine {
       p.vx = 0;
       p.vy = 0;
       p.score = 0;
+      p.tags = 0;
       p.powerId = "";
       p.charges = 0;
       p.speedUntil = 0;
@@ -490,6 +498,7 @@ export class TagEngine {
       p.isIt = false;
       this.inputs.set(p.id, { x: 0, y: 0, usePower: false });
     }
+    this.constrainBodies();
   }
 
   private endRound() {
@@ -641,7 +650,7 @@ export class TagEngine {
       }
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      if (!p.isIt) p.score += dt;
+      if (p.isIt) p.score += dt;
       if (p.ghostUntil <= s.now) this.collideWalls(p);
       this.clampPlayer(p);
     }
@@ -711,10 +720,11 @@ export class TagEngine {
 
   private collideWalls(p: EnginePlayer) {
     const z = this.state.zone;
-    const x0 = z.x + ZONE_INSET;
-    const x1 = z.x + z.w - ZONE_INSET;
-    const y0 = z.y + ZONE_INSET;
-    const y1 = z.y + z.h - ZONE_INSET;
+    const inset = this.playerInset(p);
+    const x0 = z.x + inset;
+    const x1 = z.x + z.w - inset;
+    const y0 = z.y + inset;
+    const y1 = z.y + z.h - inset;
     for (let pass = 0; pass < 3; pass++) {
       for (const wall of Object.values(this.state.walls)) {
         const next = separateCircleFromAabb(p.x, p.y, PLAYER_RADIUS, wall);
@@ -739,10 +749,17 @@ export class TagEngine {
     }
   }
 
+  private playerInset(p: EnginePlayer) {
+    if (p.frozenUntil > this.state.now) return ZONE_INSET + 16;
+    if (p.hasShield) return ZONE_INSET + 10;
+    return ZONE_INSET;
+  }
+
   private clampPlayer(p: EnginePlayer) {
     const z = this.state.zone;
-    p.x = clamp(p.x, z.x + ZONE_INSET, z.x + z.w - ZONE_INSET);
-    p.y = clamp(p.y, z.y + ZONE_INSET, z.y + z.h - ZONE_INSET);
+    const inset = this.playerInset(p);
+    p.x = clamp(p.x, z.x + inset, z.x + z.w - inset);
+    p.y = clamp(p.y, z.y + inset, z.y + z.h - inset);
   }
 
   private resolveTags() {
@@ -764,6 +781,7 @@ export class TagEngine {
       }
       it.isIt = false;
       p.isIt = true;
+      p.tags += 1;
       s.itId = p.id;
       p.lastTaggedAt = s.now;
       it.lastTaggedAt = s.now;
@@ -1061,6 +1079,7 @@ export class TagEngine {
 
   private refreshLeaderboard() {
     this.state.leaderboard = Object.values(this.state.players)
+      .sort((a, b) => a.score - b.score || a.tags - b.tags || a.name.localeCompare(b.name))
       .map(
         (p): LeaderboardRow => ({
           id: p.id,
@@ -1070,8 +1089,7 @@ export class TagEngine {
           isIt: p.isIt,
           isBot: p.isBot,
         }),
-      )
-      .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+      );
   }
 
   private push(event: EngineEvent) {

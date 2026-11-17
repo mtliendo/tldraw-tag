@@ -6,6 +6,41 @@ import { assertBoard } from "./assert-board.mjs";
 const out = path.resolve("docs/screenshots");
 await mkdir(out, { recursive: true });
 const shot = (page, name) => page.screenshot({ path: path.join(out, name), fullPage: true });
+const IPHONE_LANDSCAPE = { width: 844, height: 390 };
+const ANDROID_LANDSCAPE = { width: 915, height: 412 };
+const IPHONE_PORTRAIT = { width: 390, height: 844 };
+
+async function setPhoneViewport(page, size) {
+  await page.setViewportSize(size);
+  await page.waitForTimeout(500);
+}
+
+async function assertLandscapeChrome(page, label) {
+  const report = await page.evaluate(() => {
+    const wrap = document.querySelector(".board-wrap")?.getBoundingClientRect();
+    const hud = document.querySelector(".play-hud-landscape")?.getBoundingClientRect();
+    const dock = document.querySelector(".play-dock-landscape")?.getBoundingClientRect();
+    const joy = document.querySelector('[aria-label="Move"]')?.getBoundingClientRect();
+    const panel = document.querySelector(".panel")?.getBoundingClientRect();
+    const parent = document.querySelector(".panel")?.parentElement?.getBoundingClientRect();
+    const you = [...document.querySelectorAll("div, span, strong, p, li")]
+      .map((el) => (el.textContent || "").trim())
+      .find((t) => /^You:\s*#\d+/i.test(t) || /You're the /i.test(t));
+    return {
+      wrap,
+      hud: Boolean(hud),
+      dock: Boolean(dock),
+      joyH: joy?.height ?? 0,
+      overlayed: Boolean(wrap && hud && dock && hud.top >= wrap.top - 2 && dock.bottom <= wrap.bottom + 4),
+      overflow: Boolean(panel && parent && (panel.bottom > parent.bottom + 4 || panel.right > parent.right + 4)),
+      you,
+    };
+  });
+  if (!report.hud || !report.dock) throw new Error(`${label}: missing landscape HUD/dock`);
+  if (!report.overlayed) throw new Error(`${label}: controls are not overlaying the board`);
+  if (report.overflow) throw new Error(`${label}: card overflowed in landscape`);
+  return report;
+}
 
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({
@@ -75,7 +110,16 @@ await joinPhone.waitForTimeout(200);
 await shot(joinPhone, "02b-join-mobile.png");
 await joinPhone.getByRole("button", { name: /join/i }).click();
 await joinPhone.waitForURL(`**/play/${code}`);
-await joinPhone.waitForTimeout(800);
+await joinPhone.waitForSelector("text=You're the", { timeout: 10000 });
+await joinPhone.waitForTimeout(400);
+await setPhoneViewport(joinPhone, IPHONE_LANDSCAPE);
+await shot(joinPhone, "09-player-iphone-landscape-lobby.png");
+await assertLandscapeChrome(joinPhone, "09-iphone-lobby");
+await setPhoneViewport(joinPhone, ANDROID_LANDSCAPE);
+await shot(joinPhone, "09b-player-android-landscape-lobby.png");
+await assertLandscapeChrome(joinPhone, "09b-android-lobby");
+await setPhoneViewport(joinPhone, IPHONE_PORTRAIT);
+await joinPhone.waitForTimeout(400);
 
 const screen = await context.newPage();
 await screen.goto(`http://localhost:3000/screen/${code}`, { waitUntil: "networkidle" });
@@ -86,7 +130,7 @@ await shot(screen, "07-projector-lobby.png");
 await admin.getByRole("button", { name: /^start$/i }).click();
 await admin.waitForTimeout(900);
 await admin.getByRole("button", { name: /showcase/i }).click();
-await admin.waitForFunction(() => /boost/i.test(document.body.innerText), null, { timeout: 8000 });
+await screen.waitForSelector('[data-inkt="wall"]', { timeout: 8000 });
 await admin.waitForTimeout(2400);
 await shot(admin, "04-ingame-powers.png");
 await shot(join, "04b-player.png");
@@ -94,14 +138,43 @@ await shot(screen, "07-projector.png");
 await shot(screen, "08-projector-20.png");
 await assertBoard(screen, "07-projector");
 await assertBoard(screen, "08-projector-20");
+{
+  const truncated = await screen.evaluate(() =>
+    [...document.querySelectorAll('[data-inkt="label"]')]
+      .map((el) => (el.textContent || "").trim())
+      .filter((t) => t.includes("…") || /\.\.\.$/.test(t) || /\bA\.\.\./.test(t) || /\bSta\.\.\./.test(t)),
+  );
+  if (truncated.length) throw new Error(`08 truncated labels: ${truncated.join(", ")}`);
+}
 await joinPhone.waitForTimeout(400);
 await shot(joinPhone, "04c-player-mobile.png");
 await assertBoard(joinPhone, "04c-player-mobile", { follow: true });
+await setPhoneViewport(joinPhone, IPHONE_LANDSCAPE);
+await shot(joinPhone, "10c-player-rotate-landscape.png");
+await shot(joinPhone, "10-player-iphone-landscape.png");
+await assertBoard(joinPhone, "10-iphone-landscape", { follow: true });
+await assertLandscapeChrome(joinPhone, "10-iphone-mid");
+await setPhoneViewport(joinPhone, ANDROID_LANDSCAPE);
+await shot(joinPhone, "10b-player-android-landscape.png");
+await assertBoard(joinPhone, "10b-android-landscape", { follow: true });
+await assertLandscapeChrome(joinPhone, "10b-android-mid");
+await setPhoneViewport(joinPhone, IPHONE_PORTRAIT);
 
 await admin.waitForTimeout(7000);
 await shot(admin, "05-shrinking-zone.png");
 await shot(screen, "05b-projector-zone.png");
 await assertBoard(screen, "05b-projector-zone");
+{
+  const iceLeak = await screen.evaluate(() => {
+    const zone = document.querySelector('[data-inkt="zone"]')?.getBoundingClientRect();
+    if (!zone) return -1;
+    return [...document.querySelectorAll('[data-inkt="player"] img')]
+      .filter((img) => /frozen/.test(img.getAttribute("src") || ""))
+      .map((img) => img.getBoundingClientRect())
+      .filter((r) => r.top < zone.top - 1 || r.bottom > zone.bottom + 1 || r.left < zone.left - 1 || r.right > zone.right + 1).length;
+  });
+  if (iceLeak > 0) throw new Error(`05b frozen overlay left the zone (${iceLeak})`);
+}
 
 await admin.waitForSelector("text=wins!", { timeout: 30000 });
 await admin.waitForTimeout(2400);
@@ -122,6 +195,32 @@ await shot(screen, "06b-projector-end.png");
   if (clip > 0) throw new Error(`06b labels clipped by zone: ${clip}`);
 }
 await shot(joinPhone, "06c-player-mobile-end.png");
+{
+  const end = await joinPhone.evaluate(() => {
+    const you = [...document.querySelectorAll("div, span, strong, p, li")]
+      .map((el) => (el.textContent || "").trim())
+      .find((t) => /^You:\s*#\d+/i.test(t));
+    const items = [...document.querySelectorAll("ol li")].map((li) => (li.textContent || "").trim());
+    const panel = document.querySelector(".panel");
+    const parent = panel?.parentElement;
+    const pr = panel?.getBoundingClientRect();
+    const or = parent?.getBoundingClientRect();
+    const overflow = Boolean(pr && or && (pr.bottom > or.bottom + 4 || pr.right > or.right + 4));
+    const graph = items.find((t) => /Graph/i.test(t)) || "";
+    return { you, count: items.length, overflow, graph, scroll: (document.querySelector("ol")?.scrollHeight || 0) > (document.querySelector("ol")?.clientHeight || 0) };
+  });
+  if (!end.you) throw new Error("06c missing pinned You rank");
+  if (end.count < 20) throw new Error(`06c list short (${end.count})`);
+  if (end.overflow) throw new Error("06c leaderboard overflowed the card");
+  if (/Graph\.\.\./i.test(end.graph)) throw new Error(`06c truncated Graphite: ${end.graph}`);
+}
+await setPhoneViewport(joinPhone, IPHONE_LANDSCAPE);
+await shot(joinPhone, "11-player-iphone-landscape-end.png");
+await assertLandscapeChrome(joinPhone, "11-iphone-end");
+await setPhoneViewport(joinPhone, ANDROID_LANDSCAPE);
+await shot(joinPhone, "11b-player-android-landscape-end.png");
+await assertLandscapeChrome(joinPhone, "11b-android-end");
+await setPhoneViewport(joinPhone, IPHONE_PORTRAIT);
 
 await screen.getByRole("button", { name: /play again/i }).click();
 await admin.waitForFunction(() => !/wins!/i.test(document.body.innerText), { timeout: 10000 });

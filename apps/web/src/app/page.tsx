@@ -62,7 +62,7 @@ export default function HomePage() {
           <ol style={{ paddingLeft: 18, lineHeight: 1.6 }}>
             <li>Admin signs in, creates a room, throws the QR on a projector.</li>
             <li>The crowd joins from their phones. Each player gets a critter; powers are stickers.</li>
-            <li>Whoever is IT at the buzzer loses. Time spent not-IT is your score.</li>
+            <li>Whoever is IT at the buzzer loses. Least time as IT wins.</li>
           </ol>
         </div>
       </section>

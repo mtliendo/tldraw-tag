@@ -12,6 +12,7 @@ import {
 import { POWER_UPS, STROKE, type PowerId } from "@inkt/shared";
 import { Critter } from "@/components/Critter";
 import { PowerGlyph } from "@/components/PowerGlyph";
+import { shortPlayerName } from "@/game/layoutPlayers";
 
 declare module "tldraw" {
   export interface TLGlobalShapePropsMap {
@@ -442,13 +443,14 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
                 lineHeight: `${labelH - 2}px`,
                 transform: "translate(-50%, -50%)",
                 textAlign: "center",
+                zIndex: 5,
               }}
             >
               {shape.props.self
-                ? `${shape.props.name} you`
+                ? `${shortPlayerName(shape.props.name)} you`
                 : shape.props.isIt
-                  ? `IT ${shape.props.name}`
-                  : shape.props.name}
+                  ? `IT ${shortPlayerName(shape.props.name)}`
+                  : shortPlayerName(shape.props.name)}
             </div>
           )}
         </div>
@@ -470,7 +472,7 @@ export class PowerShapeUtil extends ShapeUtil<PowerShape> {
   static override type = "inkt-power" as const;
   static override props: RecordProps<PowerShape> = { w: T.number, h: T.number, kind: T.string };
   getDefaultProps() {
-    return { w: 64, h: 78, kind: "speedster" };
+    return { w: 56, h: 56, kind: "speedster" };
   }
   getGeometry(shape: PowerShape) {
     return new Circle2d({ radius: 28, isFilled: true });
@@ -479,7 +481,7 @@ export class PowerShapeUtil extends ShapeUtil<PowerShape> {
     const def = POWER_UPS[shape.props.kind as PowerId];
     return (
       <HTMLContainer>
-        <div className="gem-bob" style={{ width: shape.props.w, height: shape.props.h, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div className="gem-bob" style={{ width: shape.props.w, height: shape.props.h, display: "grid", placeItems: "center" }}>
           <div
             style={{
               width: 44,
@@ -493,12 +495,11 @@ export class PowerShapeUtil extends ShapeUtil<PowerShape> {
               boxShadow: "0 2px 0 rgba(29,29,31,.08)",
               position: "relative",
               outline: `1.5px dashed ${def?.color ?? "#F4B63F"}`,
-              outlineOffset: 6,
+              outlineOffset: 4,
             }}
           >
             {def ? <PowerGlyph icon={def.icon} color={def.ink} size={24} /> : null}
           </div>
-          <div style={{ marginTop: 4, fontSize: 11, fontWeight: 600 }}>{def?.verb ?? "loot"}</div>
         </div>
       </HTMLContainer>
     );

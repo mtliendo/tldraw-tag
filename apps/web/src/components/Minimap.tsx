@@ -11,8 +11,8 @@ export function Minimap({
   compact?: boolean;
 }) {
   const z = view.zone;
-  const w = compact ? 64 : 88;
-  const h = Math.max(compact ? 36 : 44, (z.h / Math.max(1, z.w)) * w);
+  const w = compact ? 56 : 88;
+  const h = Math.max(compact ? 32 : 44, (z.h / Math.max(1, z.w)) * w);
   const sx = (x: number) => ((x - z.x) / Math.max(1, z.w)) * w;
   const sy = (y: number) => ((y - z.y) / Math.max(1, z.h)) * h;
   const r = Math.max(1.8, (PLAYER_TOKEN / 2 / Math.max(z.w, z.h)) * w * 1.6);

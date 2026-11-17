@@ -33,10 +33,10 @@ function mix(a: ViewState, b: ViewState, t: number): ViewState {
   const zone = b.zone;
   const players: ViewPlayer[] = b.players.map((p) => {
     const o = prev.get(p.id);
-    if (!o) return { ...p, ...clampToZone(p.x, p.y, zone) };
+    if (!o) return { ...p, ...clampToZone(p.x, p.y, zone, overlayPad(p)) };
     return {
       ...p,
-      ...clampToZone(lerp(o.x, p.x, t), lerp(o.y, p.y, t), zone),
+      ...clampToZone(lerp(o.x, p.x, t), lerp(o.y, p.y, t), zone, overlayPad(p)),
     };
   });
   const decoyPrev = new Map(a.decoys.map((d) => [d.id, d]));
@@ -57,13 +57,24 @@ function clampState(state: ViewState): ViewState {
   const zone = state.zone;
   return {
     ...state,
-    players: state.players.map((p) => ({ ...p, ...clampToZone(p.x, p.y, zone) })),
+    players: state.players.map((p) => ({ ...p, ...clampToZone(p.x, p.y, zone, overlayPad(p)) })),
     decoys: state.decoys.map((d) => ({ ...d, ...clampToZone(d.x, d.y, zone) })),
   };
 }
 
-function clampToZone(x: number, y: number, zone: { x: number; y: number; w: number; h: number }) {
-  const inset = PLAYER_RADIUS + 2;
+function overlayPad(p: { frozen?: boolean; hasShield?: boolean }) {
+  if (p.frozen) return 16;
+  if (p.hasShield) return 10;
+  return 0;
+}
+
+function clampToZone(
+  x: number,
+  y: number,
+  zone: { x: number; y: number; w: number; h: number },
+  extra = 0,
+) {
+  const inset = PLAYER_RADIUS + 2 + extra;
   return {
     x: Math.min(Math.max(x, zone.x + inset), zone.x + zone.w - inset),
     y: Math.min(Math.max(y, zone.y + inset), zone.y + zone.h - inset),

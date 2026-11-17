@@ -20,11 +20,15 @@ import { Confetti } from "@/components/Confetti";
 const license = process.env.NEXT_PUBLIC_TLDRAW_LICENSE_KEY;
 const TOKEN_R = PLAYER_TOKEN / 2;
 
+type FollowPad = { left: number; right: number; top: number; bottom: number };
+
 export function GameCanvas({
   view,
   selfId,
   followZone = true,
   followPlayer = false,
+  followPad,
+  blobPx = MOBILE_BLOB_PX,
   interactive = false,
   labelScale = 1,
 }: {
@@ -32,6 +36,8 @@ export function GameCanvas({
   selfId?: string | null;
   followZone?: boolean;
   followPlayer?: boolean;
+  followPad?: FollowPad;
+  blobPx?: number;
   interactive?: boolean;
   labelScale?: number;
 }) {
@@ -44,6 +50,10 @@ export function GameCanvas({
   followZoneRef.current = followZone;
   const followPlayerRef = useRef(followPlayer);
   followPlayerRef.current = followPlayer;
+  const followPadRef = useRef(followPad);
+  followPadRef.current = followPad;
+  const blobPxRef = useRef(blobPx);
+  blobPxRef.current = blobPx;
   const labelScaleRef = useRef(labelScale);
   labelScaleRef.current = labelScale;
   const viewRef = useRef(view);
@@ -74,13 +84,20 @@ export function GameCanvas({
     if (followPlayerRef.current) {
       const self =
         state.players.find((p) => p.id === selfIdRef.current) ?? state.players[0];
-      const blobZoom = MOBILE_BLOB_PX / PLAYER_TOKEN;
+      const blobZoom = Math.max(32, blobPxRef.current) / PLAYER_TOKEN;
       const coverZoom = Math.max(vp.w / Math.max(1, zone.w), vp.h / Math.max(1, zone.h));
       const zoom = Math.max(blobZoom, coverZoom);
       const viewW = vp.w / zoom;
       const viewH = vp.h / zoom;
-      let left = (self?.x ?? zone.x + zone.w / 2) - viewW / 2;
-      let top = (self?.y ?? zone.y + zone.h / 2) - viewH / 2;
+      const pad = followPadRef.current ?? { left: 0, right: 0, top: 0, bottom: 0 };
+      const innerW = Math.max(1, vp.w - pad.left - pad.right);
+      const innerH = Math.max(1, vp.h - pad.top - pad.bottom);
+      const focusX = pad.left + innerW / 2;
+      const focusY = pad.top + innerH / 2;
+      const originX = self?.x ?? zone.x + zone.w / 2;
+      const originY = self?.y ?? zone.y + zone.h / 2;
+      let left = originX - focusX / zoom;
+      let top = originY - focusY / zoom;
       left = Math.min(Math.max(left, zone.x), zone.x + Math.max(0, zone.w - viewW));
       top = Math.min(Math.max(top, zone.y), zone.y + Math.max(0, zone.h - viewH));
       if (viewW >= zone.w) left = zone.x + (zone.w - viewW) / 2;
@@ -184,7 +201,7 @@ export function GameCanvas({
           type: "inkt-power",
           x: pow.x - POWER_TOKEN / 2,
           y: pow.y - POWER_TOKEN / 2,
-          props: { w: 64, h: 78, kind: pow.kind },
+          props: { w: 56, h: 56, kind: pow.kind },
         });
       }
       for (const decoy of state.decoys) {
@@ -216,9 +233,15 @@ export function GameCanvas({
             },
           ]
         : [];
+      const wallHoles = state.walls.map((wall) => ({
+        x: wall.x,
+        y: wall.y,
+        w: wall.w,
+        h: wall.h,
+      }));
       const laid = layoutPlayers(state.players, state.zone, scale, selfId, {
         clamp: clampBox,
-        avoid: hole,
+        avoid: [...hole, ...wallHoles],
       });
       for (const p of laid) {
         const wasIt = prevIt.current.get(p.id);
@@ -231,7 +254,9 @@ export function GameCanvas({
           seenPlayers.current.add(p.id);
         }
         const joinFlash = (flashUntil.current.get(p.id) ?? 0) > now;
-        const showLabel = p.showLabel || joinFlash || p.id === hoverId || p.id === selfId || p.isIt;
+        const showLabel = followPlayerRef.current
+          ? p.id === selfId || p.isIt || p.frozen || joinFlash || p.id === hoverId
+          : p.showLabel || joinFlash || p.id === hoverId || p.id === selfId || p.isIt;
         playerIds.push(
           make(`player:${p.id}`, {
             type: "inkt-player",
@@ -303,7 +328,7 @@ export function GameCanvas({
       cancelAnimationFrame(frame);
       cancelAnimationFrame(second);
     };
-  }, [zoneSig, phase, fit, followPlayer]);
+  }, [zoneSig, phase, fit, followPlayer, followPad, blobPx]);
 
   useEffect(() => {
     const el = wrapRef.current;

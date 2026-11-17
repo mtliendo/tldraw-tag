@@ -5,6 +5,7 @@ import {
   ARENA_H,
   ARENA_W,
   PLAYER_RADIUS,
+  PLAYER_SEPARATION,
   POWER_RADIUS,
   WALL_THICKNESS,
   WALL_WIDTH,
@@ -47,6 +48,58 @@ describe("TagEngine loop", () => {
       assert.ok(p.x <= engine.state.zone.x + engine.state.zone.w - ZONE_INSET + 0.5);
       assert.ok(p.y >= engine.state.zone.y + ZONE_INSET - 0.5);
       assert.ok(p.y <= engine.state.zone.y + engine.state.zone.h - ZONE_INSET + 0.5);
+    }
+  });
+
+  it("keeps every player fully inside the shrinking zone every tick", () => {
+    const engine = new TagEngine({
+      roundLength: 14,
+      shrinkInterval: 2.5,
+      rand: rng(21),
+    });
+    engine.addPlayer({ name: "Ada", avatar: "bolt" });
+    engine.spawnBots(10);
+    engine.start();
+    for (let i = 0; i < 320 && engine.state.phase !== "ended"; i++) {
+      engine.tick(0.05);
+      const z = engine.state.zone;
+      const players = Object.values(engine.state.players);
+      for (const p of players) {
+        assert.ok(p.x - PLAYER_RADIUS >= z.x - 0.05, `${p.name} left of zone at tick ${i}`);
+        assert.ok(p.x + PLAYER_RADIUS <= z.x + z.w + 0.05, `${p.name} right of zone at tick ${i}`);
+        assert.ok(p.y - PLAYER_RADIUS >= z.y - 0.05, `${p.name} above zone at tick ${i}`);
+        assert.ok(p.y + PLAYER_RADIUS <= z.y + z.h + 0.05, `${p.name} below zone at tick ${i}`);
+      }
+    }
+    assert.equal(engine.state.phase, "ended");
+  });
+
+  it("soft-separates stacked players so blobs do not sit on top of each other", () => {
+    const engine = new TagEngine({ roundLength: 20, shrinkInterval: 20, rand: rng(4) });
+    const names = ["Mia", "Sketch", "Doodle", "Pixel", "Scribble", "Nib"];
+    for (const name of names) engine.addPlayer({ name, avatar: "bolt" });
+    engine.start();
+    for (const p of Object.values(engine.state.players)) {
+      p.x = 800;
+      p.y = 820;
+      engine.setInput(p.id, { x: 0, y: 0, usePower: false });
+    }
+    for (let i = 0; i < 12; i++) engine.tick(0.05);
+    const players = Object.values(engine.state.players);
+    const z = engine.state.zone;
+    for (const p of players) {
+      assert.ok(p.x - PLAYER_RADIUS >= z.x - 0.05);
+      assert.ok(p.x + PLAYER_RADIUS <= z.x + z.w + 0.05);
+      assert.ok(p.y - PLAYER_RADIUS >= z.y - 0.05);
+      assert.ok(p.y + PLAYER_RADIUS <= z.y + z.h + 0.05);
+    }
+    for (let a = 0; a < players.length; a++) {
+      for (let b = a + 1; b < players.length; b++) {
+        assert.ok(
+          dist(players[a].x, players[a].y, players[b].x, players[b].y) >= PLAYER_SEPARATION - 1.5,
+          `${players[a].name} overlapped ${players[b].name}`,
+        );
+      }
     }
   });
 

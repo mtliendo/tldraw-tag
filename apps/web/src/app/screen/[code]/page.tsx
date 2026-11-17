@@ -33,8 +33,8 @@ export default function ScreenPage() {
         background: "var(--paper)",
       }}
     >
-      <section style={{ position: "relative", minWidth: 0 }}>
-        <GameCanvas view={view} interactive labelScale={1.5} />
+      <section style={{ position: "relative", minWidth: 0, minHeight: 0, height: "100%" }}>
+        <GameCanvas view={view} interactive labelScale={1.5} followZone />
 
         <div
           style={{

@@ -16,7 +16,7 @@ const LABEL_CROWD = 15;
 export function GameCanvas({
   view,
   selfId,
-  followZone = false,
+  followZone = true,
   interactive = false,
   labelScale = 1,
 }: {
@@ -40,21 +40,16 @@ export function GameCanvas({
   const [hoverId, setHoverId] = useState<string | null>(null);
 
   const fit = useCallback((editor: Editor, zone = viewRef.current.zone) => {
-    editor.setCameraOptions({ isLocked: false });
-    if (followZoneRef.current) {
-      const pad = 28 * labelScaleRef.current;
-      editor.zoomToBounds(
-        { x: zone.x - pad, y: zone.y - pad, w: zone.w + pad * 2, h: zone.h + pad * 2 },
-        { inset: 6, animation: { duration: 0 } },
-      );
-    } else {
-      editor.zoomToBounds(
-        { x: -48, y: -48, w: ARENA_W + 96, h: ARENA_H + 96 },
-        { inset: 8, animation: { duration: 0 } },
-      );
-    }
-    editor.setCameraOptions({ isLocked: true });
-    editor.setCamera(editor.getCamera());
+    const el = wrapRef.current;
+    if (el) editor.updateViewportScreenBounds(el);
+    editor.setCameraOptions({ isLocked: false, zoomSteps: [0.05, 8] });
+    const pad = followZoneRef.current ? 6 : 6;
+    editor.zoomToBounds(
+      { x: zone.x - pad, y: zone.y - pad, w: zone.w + pad * 2, h: zone.h + pad * 2 },
+      { inset: 0, immediate: true, force: true, animation: { duration: 0 } },
+    );
+    editor.setCameraOptions({ isLocked: true, zoomSteps: [0.05, 8] });
+    editor.setCamera(editor.getCamera(), { immediate: true, force: true });
   }, []);
 
   const sync = useCallback(
@@ -151,22 +146,23 @@ export function GameCanvas({
         );
       }
       const now = Date.now();
-      const laid = layoutPlayers(state.players, state.zone, scale);
+      const laid = layoutPlayers(state.players, state.zone, scale, selfId);
       for (const p of laid) {
         const wasIt = prevIt.current.get(p.id);
         if (wasIt !== undefined && wasIt !== p.isIt) {
           squashUntil.current.set(p.id, now + 420);
         }
         prevIt.current.set(p.id, p.isIt);
-        const stack = p.labelStack ?? 0;
         const showLabel =
-          p.isIt || p.id === selfId || p.frozen || !crowded || p.id === hoverId;
-        const boxH = TOKEN_R * 2 + 8 + (showLabel ? (20 + stack * 18) * scale : 0);
+          p.showLabel &&
+          (p.isIt || p.id === selfId || p.frozen || !crowded || p.id === hoverId);
+        const labelH = showLabel ? 24 * scale : 0;
+        const boxH = TOKEN_R * 2 + 8 + labelH;
         playerIds.push(
           make(`player:${p.id}`, {
             type: "inkt-player",
             x: p.x - 70,
-            y: p.y - TOKEN_R,
+            y: p.labelAbove ? p.y - TOKEN_R - labelH : p.y - TOKEN_R,
             props: {
               w: 140,
               h: boxH,
@@ -181,8 +177,8 @@ export function GameCanvas({
               charges: p.charges,
               self: p.id === selfId,
               labelX: p.labelX,
-              labelAbove: false,
-              labelStack: stack,
+              labelAbove: p.labelAbove,
+              labelStack: 0,
               squash: (squashUntil.current.get(p.id) ?? 0) > now,
               showLabel,
               playerId: p.id,
@@ -213,9 +209,9 @@ export function GameCanvas({
   const zoneSig = `${view.zone.x.toFixed(0)}:${view.zone.y.toFixed(0)}:${view.zone.w.toFixed(0)}:${view.zone.h.toFixed(0)}`;
   useEffect(() => {
     const editor = editorRef.current;
-    if (!editor || !followZone) return;
+    if (!editor) return;
     fit(editor, view.zone);
-  }, [zoneSig, followZone, fit, view.zone]);
+  }, [zoneSig, fit, view.zone]);
 
   useEffect(() => {
     const el = wrapRef.current;

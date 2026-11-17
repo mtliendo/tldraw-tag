@@ -51,7 +51,7 @@ export function AdminDesk({
   const join = code ? joinUrl(code) : "";
 
   return (
-    <main style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "360px 1fr" }}>
+    <main style={{ height: "100vh", display: "grid", gridTemplateColumns: "360px minmax(0, 1fr)" }}>
       <aside style={{ padding: 20, borderRight: "1px solid var(--line)", overflow: "auto" }}>
         <div className="kicker">Admin · {mode}</div>
         <h1 style={{ fontSize: 42, margin: "6px 0 4px" }}>INK TAG</h1>
@@ -184,13 +184,13 @@ export function AdminDesk({
           </>
         )}
       </aside>
-      <section style={{ position: "relative" }}>
+      <section style={{ position: "relative", minWidth: 0, minHeight: 0, height: "100%" }}>
         {created ? (
           <>
             <div style={{ position: "absolute", top: 16, left: 16, zIndex: 6 }}>
               <TopHud view={view} />
             </div>
-            <GameCanvas view={view} />
+            <GameCanvas view={view} followZone />
             {view.phase === "ended" && (
               <div
                 style={{

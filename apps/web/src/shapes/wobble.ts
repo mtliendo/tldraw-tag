@@ -3,7 +3,7 @@ export function wobbleRectPath(w: number, h: number, seed = 1, jitter = 2.4) {
   const j = (i: number, axis: number) =>
     Math.sin((i + seed) * 2.3 + axis) * jitter + Math.cos((i + seed) * 1.1 + axis * 0.7) * jitter * 0.35;
 
-  const pad = 4;
+  const pad = 1;
   const x0 = pad;
   const y0 = pad;
   const x1 = w - pad;

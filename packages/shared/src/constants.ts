@@ -14,7 +14,8 @@ export const PLAYER_LABEL_H = 20;
 export const PLAYER_LABEL_W = 96;
 export const STROKE = 1.5;
 
-export const TAG_DISTANCE = PLAYER_RADIUS * 2 + 8;
+export const PLAYER_SEPARATION = PLAYER_RADIUS * 2 + 8;
+export const TAG_DISTANCE = PLAYER_RADIUS * 2 + 16;
 export const TAG_COOLDOWN = 0.55;
 export const PICKUP_DISTANCE = 44;
 

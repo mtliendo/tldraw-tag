@@ -296,6 +296,8 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
     const token = 72;
     const stroke = shape.props.isIt ? "#e03131" : "#1d1d1d";
     const blobLeft = (shape.props.w - token) / 2;
+    const labelH = 24 * shape.props.labelScale;
+    const blobTop = shape.props.labelAbove ? labelH : 0;
     return (
       <HTMLContainer>
         <div
@@ -317,7 +319,7 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
               height: token,
               position: "absolute",
               left: blobLeft,
-              top: 0,
+              top: blobTop,
             }}
           >
             {shape.props.frozen && (
@@ -359,8 +361,8 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
               className="player-label"
               style={{
                 position: "absolute",
-                left: shape.props.w / 2,
-                top: token + 4 * shape.props.labelScale + shape.props.labelStack * 18 * shape.props.labelScale,
+                left: shape.props.w / 2 + shape.props.labelX,
+                top: shape.props.labelAbove ? 0 : blobTop + token + 4 * shape.props.labelScale,
                 fontWeight: 600,
                 color: shape.props.isIt ? "#e03131" : "#1d1d1d",
               }}

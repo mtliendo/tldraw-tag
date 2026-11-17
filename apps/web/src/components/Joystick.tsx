@@ -4,8 +4,10 @@ import { useRef } from "react";
 
 export function Joystick({
   onChange,
+  compact = false,
 }: {
   onChange: (x: number, y: number) => void;
+  compact?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const knob = useRef<HTMLDivElement>(null);
@@ -51,8 +53,8 @@ export function Joystick({
       onPointerUp={end}
       onPointerCancel={end}
       style={{
-        width: 156,
-        height: 156,
+        width: compact ? 118 : 156,
+        height: compact ? 118 : 156,
         borderRadius: "48% 52% 46% 54%",
         background: "#FCE19C",
         border: "1.5px solid var(--ink)",
@@ -65,15 +67,15 @@ export function Joystick({
       <div
         ref={knob}
         style={{
-          width: 64,
-          height: 64,
+          width: compact ? 48 : 64,
+          height: compact ? 48 : 64,
           borderRadius: "46% 54% 50% 50%",
           background: "#4ba1f1",
           border: "1.5px solid var(--ink)",
           position: "absolute",
           left: "50%",
           top: "50%",
-          margin: "-32px 0 0 -32px",
+          margin: compact ? "-24px 0 0 -24px" : "-32px 0 0 -32px",
           boxShadow: "var(--shadow)",
         }}
       />
@@ -83,7 +85,7 @@ export function Joystick({
           position: "absolute",
           left: 0,
           right: 0,
-          bottom: -22,
+          bottom: compact ? 8 : -22,
           textAlign: "center",
           color: "var(--ink)",
         }}

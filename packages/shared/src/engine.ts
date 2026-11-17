@@ -13,6 +13,7 @@ import {
   MIN_ROUND_LENGTH,
   PICKUP_DISTANCE,
   PLAYER_RADIUS,
+  PLAYER_SEPARATION,
   PLAYER_SPEED,
   POWER_MAX_ON_BOARD,
   POWER_PULSE_WARN,
@@ -360,11 +361,14 @@ export class TagEngine {
     this.tickPulses();
     this.tickWalls();
     this.tickDecoys(dt);
+    this.pruneLootOutsideZone();
     this.maybeSpawnPower();
     this.thinkBots();
     this.tickPlayers(dt);
     this.resolveTags();
     this.resolvePickups();
+    this.separatePlayers();
+    for (const p of Object.values(this.state.players)) this.clampPlayer(p);
     this.refreshLeaderboard();
     if (this.state.timeLeft <= 0) this.endRound();
   }
@@ -495,6 +499,8 @@ export class TagEngine {
       this.push({ type: "shrink" });
     }
     for (const p of Object.values(s.players)) this.clampPlayer(p);
+    this.separatePlayers();
+    for (const p of Object.values(s.players)) this.clampPlayer(p);
   }
 
   private tickPulses() {
@@ -526,8 +532,20 @@ export class TagEngine {
       decoy.vx *= 0.985;
       decoy.vy *= 0.985;
       const z = s.zone;
-      decoy.x = clamp(decoy.x, z.x + 16, z.x + z.w - 16);
-      decoy.y = clamp(decoy.y, z.y + 16, z.y + z.h - 16);
+      decoy.x = clamp(decoy.x, z.x + ZONE_INSET, z.x + z.w - ZONE_INSET);
+      decoy.y = clamp(decoy.y, z.y + ZONE_INSET, z.y + z.h - ZONE_INSET);
+    }
+  }
+
+  private pruneLootOutsideZone() {
+    const z = this.state.zone;
+    const inside = (x: number, y: number, rad: number) =>
+      x - rad >= z.x && x + rad <= z.x + z.w && y - rad >= z.y && y + rad <= z.y + z.h;
+    for (const [id, item] of Object.entries(this.state.powerUps)) {
+      if (!inside(item.x, item.y, POWER_RADIUS)) delete this.state.powerUps[id];
+    }
+    for (const [id, pulse] of Object.entries(this.state.pulses)) {
+      if (!inside(pulse.x, pulse.y, POWER_RADIUS)) delete this.state.pulses[id];
     }
   }
 
@@ -572,9 +590,52 @@ export class TagEngine {
       if (p.ghostUntil <= s.now) this.collideWalls(p);
       p.y += p.vy * dt;
       if (p.ghostUntil <= s.now) this.collideWalls(p);
-      this.clampPlayer(p);
-      if (p.ghostUntil <= s.now) this.collideWalls(p);
       if (!p.isIt) p.score += dt;
+    }
+    this.separatePlayers();
+    for (const p of Object.values(s.players)) this.clampPlayer(p);
+    this.separatePlayers();
+    for (const p of Object.values(s.players)) this.clampPlayer(p);
+  }
+
+  private separatePlayers() {
+    const list = Object.values(this.state.players);
+    const minDist = PLAYER_SEPARATION;
+    const z = this.state.zone;
+    const x0 = z.x + ZONE_INSET;
+    const x1 = z.x + z.w - ZONE_INSET;
+    const y0 = z.y + ZONE_INSET;
+    const y1 = z.y + z.h - ZONE_INSET;
+    for (let pass = 0; pass < 6; pass++) {
+      for (let i = 0; i < list.length; i++) {
+        const a = list[i];
+        if (a.ghostUntil > this.state.now) continue;
+        for (let j = i + 1; j < list.length; j++) {
+          const b = list[j];
+          if (b.ghostUntil > this.state.now) continue;
+          let dx = a.x - b.x;
+          let dy = a.y - b.y;
+          let d = Math.hypot(dx, dy);
+          if (d < 1e-4) {
+            dx = (i % 2 === 0 ? 1 : -1) * 0.85;
+            dy = (j % 2 === 0 ? 1 : -1) * 0.15;
+            d = Math.hypot(dx, dy);
+          }
+          if (d >= minDist) continue;
+          const push = (minDist - d) / 2;
+          let ux = dx / d;
+          let uy = dy / d;
+          const yRoom = Math.min(a.y - y0, y1 - a.y, b.y - y0, y1 - b.y);
+          if (yRoom < PLAYER_RADIUS * 0.35) {
+            ux = dx === 0 ? (a.id > b.id ? 1 : -1) : Math.sign(dx) || 1;
+            uy = 0;
+          }
+          a.x = clamp(a.x + ux * push, x0, x1);
+          a.y = clamp(a.y + uy * push, y0, y1);
+          b.x = clamp(b.x - ux * push, x0, x1);
+          b.y = clamp(b.y - uy * push, y0, y1);
+        }
+      }
     }
   }
 

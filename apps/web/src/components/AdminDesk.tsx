@@ -176,6 +176,13 @@ export function AdminDesk({
               >
                 Pin min zone
               </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => admin("pinTintedIt")}
+                disabled={view.phase !== "playing"}
+              >
+                Pin tinted IT
+              </button>
               {code && (
                 <a className="btn btn-ghost" href={screenUrl(code)} target="_blank" rel="noreferrer">
                   Projector

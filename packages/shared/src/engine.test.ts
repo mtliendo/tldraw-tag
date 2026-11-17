@@ -541,6 +541,22 @@ describe("TagEngine loop", () => {
     assert.ok(boardIdx >= 0);
   });
 
+  it("can pin a tinted repeat as IT", () => {
+    const engine = new TagEngine({ roundLength: 20, rand: rng(21) });
+    engine.spawnBots(18);
+    engine.addPlayer({ id: "ada", name: "Ada" });
+    engine.addPlayer({ id: "mia", name: "Mia" });
+    engine.start();
+    engine.pinTintedIt();
+    const it = engine.state.players[engine.state.itId];
+    assert.ok(it);
+    assert.equal(it.id, "mia");
+    assert.ok((it.tint ?? 0) > 0, `IT ${it.name} should be a tinted repeat, tint=${it.tint}`);
+    assert.equal(it.isBot, false);
+    assert.equal(it.isIt, true);
+    assert.equal(Object.values(engine.state.players).filter((p) => p.isIt).length, 1);
+  });
+
   it("breaks equal IT time with fewer tags first", () => {
     const engine = new TagEngine({ roundLength: 20, shrinkInterval: 30, rand: rng(8) });
     engine.addPlayer({ id: "a", name: "Ada", avatar: "bolt" });

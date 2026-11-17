@@ -14,6 +14,7 @@ import {
   POWER_TOKEN,
   RING_PAD,
   TAG_DISTANCE,
+  IT_ORANGE,
   ZONE_CELL_GAP,
   minZoneSize,
   scaleWithPlayer,
@@ -21,6 +22,7 @@ import {
 
 describe("player scale", () => {
   it("derives every critter metric from PLAYER_RADIUS", () => {
+    assert.equal(IT_ORANGE, "#E8542F");
     assert.equal(PLAYER_RADIUS, 29);
     assert.equal(PLAYER_TOKEN, PLAYER_RADIUS * 2);
     assert.equal(PLAYER_SEPARATION, PLAYER_RADIUS * 2);

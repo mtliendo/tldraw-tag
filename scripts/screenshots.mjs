@@ -15,6 +15,42 @@ async function setPhoneViewport(page, size) {
   await page.waitForTimeout(500);
 }
 
+async function assertItChrome(page, label) {
+  const report = await page.evaluate(() => {
+    const flames = [...document.querySelectorAll('[data-inkt="it-flame"]')];
+    const crowns = [...document.querySelectorAll('[data-inkt="it-crown"]')];
+    const pill = document.querySelector(".it-label");
+    const itPlayer = flames[0]?.closest("[data-inkt='player']");
+    const body = itPlayer?.querySelector('[data-inkt="art"]');
+    const rgb = (el) => (el ? getComputedStyle(el).backgroundColor : "");
+    return {
+      flames: flames.length,
+      crowns: crowns.length,
+      flameSrc: flames.map((el) => el.getAttribute("src")),
+      flameFilter: flames.map((el) => getComputedStyle(el).filter),
+      crownFilter: crowns.map((el) => getComputedStyle(el).filter),
+      bodyFilter: body ? getComputedStyle(body).filter : "",
+      pillBg: rgb(pill),
+    };
+  });
+  if (report.flames < 1 || report.crowns < 1) {
+    throw new Error(`${label}: missing IT flame/crown (${report.flames}/${report.crowns})`);
+  }
+  if (report.flameSrc.some((src) => src !== "/avatars/A/it-flame.svg")) {
+    throw new Error(`${label}: IT flame src ${report.flameSrc.join(",")}`);
+  }
+  if (report.flameFilter.some((f) => /hue-rotate/i.test(f || ""))) {
+    throw new Error(`${label}: IT flame took a hue-rotate (${report.flameFilter.join(";")})`);
+  }
+  if (report.crownFilter.some((f) => /hue-rotate/i.test(f || ""))) {
+    throw new Error(`${label}: IT crown took a hue-rotate (${report.crownFilter.join(";")})`);
+  }
+  if (report.pillBg && !/rgb\(\s*232,\s*84,\s*47\s*\)/.test(report.pillBg)) {
+    throw new Error(`${label}: IT pill should be #E8542F, got ${report.pillBg}`);
+  }
+  console.log(`it chrome ok ${label}`, report.bodyFilter || "no-body-filter");
+}
+
 async function assertLandscapeChrome(page, label) {
   const report = await page.evaluate(() => {
     const wrap = document.querySelector(".board-wrap")?.getBoundingClientRect();
@@ -67,7 +103,7 @@ await shot(artClamp, "12-art-clamp.png");
     for (const board of boards) {
       const zone = board.querySelector('[data-inkt="zone"]')?.getBoundingClientRect();
       if (!zone) continue;
-      for (const el of board.querySelectorAll('[data-inkt="art"], .shield-ring')) {
+      for (const el of board.querySelectorAll('[data-inkt="art"], [data-inkt="it-flame"], [data-inkt="it-crown"], .shield-ring')) {
         const r = el.getBoundingClientRect();
         if (r.width < 4 || r.height < 4) continue;
         if (r.left < zone.left - 2 || r.right > zone.right + 2 || r.top < zone.top - 2 || r.bottom > zone.bottom + 2) {
@@ -167,13 +203,18 @@ await admin.getByRole("button", { name: /^start$/i }).click();
 await admin.waitForTimeout(900);
 await admin.getByRole("button", { name: /showcase/i }).click();
 await screen.waitForSelector('[data-inkt="wall"]', { timeout: 8000 });
-await admin.waitForTimeout(2400);
+await admin.waitForTimeout(400);
+await admin.getByRole("button", { name: /pin tinted it/i }).click();
+await screen.waitForSelector('[data-inkt="player"] [data-inkt="it-flame"]', { timeout: 8000 });
+await joinPhone.waitForSelector('[data-inkt="it-flame"]', { timeout: 8000 });
+await admin.waitForTimeout(400);
 await shot(admin, "04-ingame-powers.png");
 await shot(join, "04b-player.png");
 await shot(screen, "07-projector.png");
 await shot(screen, "08-projector-20.png");
 await assertBoard(screen, "07-projector");
 await assertBoard(screen, "08-projector-20");
+await assertItChrome(screen, "08-projector-20");
 {
   const truncated = await screen.evaluate(() =>
     [...document.querySelectorAll('[data-inkt="label"]')]
@@ -182,13 +223,19 @@ await assertBoard(screen, "08-projector-20");
   );
   if (truncated.length) throw new Error(`08 truncated labels: ${truncated.join(", ")}`);
 }
+await admin.getByRole("button", { name: /pin tinted it/i }).click();
+await joinPhone.waitForSelector('[data-inkt="it-flame"]', { timeout: 8000 });
 await joinPhone.waitForTimeout(400);
 await shot(joinPhone, "04c-player-mobile.png");
 await assertBoard(joinPhone, "04c-player-mobile", { follow: true });
+await assertItChrome(joinPhone, "04c-player-mobile");
+await admin.getByRole("button", { name: /pin tinted it/i }).click();
+await joinPhone.waitForTimeout(400);
 await setPhoneViewport(joinPhone, IPHONE_LANDSCAPE);
 await shot(joinPhone, "10c-player-rotate-landscape.png");
 await shot(joinPhone, "10-player-iphone-landscape.png");
 await assertBoard(joinPhone, "10-iphone-landscape", { follow: true });
+await assertItChrome(joinPhone, "10-iphone-landscape");
 await assertLandscapeChrome(joinPhone, "10-iphone-mid");
 await setPhoneViewport(joinPhone, ANDROID_LANDSCAPE);
 await shot(joinPhone, "10b-player-android-landscape.png");
@@ -198,15 +245,24 @@ await setPhoneViewport(joinPhone, IPHONE_PORTRAIT);
 
 await admin.waitForTimeout(7000);
 await shot(admin, "05-shrinking-zone.png");
-await shot(screen, "05b-projector-zone.png");
-await assertBoard(screen, "05b-projector-zone");
+let boardErr;
+for (let attempt = 0; attempt < 5; attempt++) {
+  await shot(screen, "05b-projector-zone.png");
+  try {
+    await assertBoard(screen, "05b-projector-zone");
+    boardErr = null;
+    break;
+  } catch (err) {
+    boardErr = err;
+    await screen.waitForTimeout(500);
+  }
+}
+if (boardErr) throw boardErr;
 {
   const itSprites = await screen.evaluate(() =>
-    [...document.querySelectorAll('[data-inkt="player"] img')]
-      .map((img) => img.getAttribute("src") || "")
-      .filter((src) => /-it\.svg/.test(src)).length,
+    [...document.querySelectorAll('[data-inkt="player"] [data-inkt="it-flame"]')].length,
   );
-  if (itSprites !== 1) throw new Error(`05b expected one IT sprite, got ${itSprites}`);
+  if (itSprites !== 1) throw new Error(`05b expected one IT flame, got ${itSprites}`);
   const iceLeak = await screen.evaluate(() => {
     const zone = document.querySelector('[data-inkt="zone"]')?.getBoundingClientRect();
     if (!zone) return -1;

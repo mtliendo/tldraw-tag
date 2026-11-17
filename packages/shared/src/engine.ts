@@ -459,6 +459,19 @@ export class TagEngine {
     this.constrainBodies();
   }
 
+  /** Make a hue-tinted repeat the current IT so QA can check flame/crown chrome. */
+  pinTintedIt() {
+    const s = this.state;
+    if (s.phase !== "playing") return;
+    const players = Object.values(s.players);
+    const tinted = players.filter((p) => (p.tint ?? 0) > 0);
+    const choice = [...tinted].reverse().find((p) => !p.isBot) ?? tinted[0];
+    if (!choice) return;
+    for (const p of players) p.isIt = false;
+    choice.isIt = true;
+    s.itId = choice.id;
+  }
+
   tick(dt: number) {
     this.dt = dt;
     this.state.events = [];

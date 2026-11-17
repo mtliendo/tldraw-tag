@@ -14,7 +14,7 @@ export async function assertBoard(page, label, { follow = false } = {}) {
       }))
       .filter((b) => b.r.width > 6 && b.r.height > 6);
     const board = document.querySelector(".board-wrap") || document;
-    const arts = [...board.querySelectorAll('[data-inkt="player"] [data-inkt="art"], [data-inkt="player"] .shield-ring')]
+    const arts = [...board.querySelectorAll('[data-inkt="player"] [data-inkt="art"], [data-inkt="player"] [data-inkt="it-flame"], [data-inkt="player"] [data-inkt="it-crown"], [data-inkt="player"] .shield-ring')]
       .map((el) => ({
         id: el.closest("[data-inkt='player']")?.getAttribute("data-player-id") || el.getAttribute("data-inkt") || "art",
         r: el.getBoundingClientRect(),

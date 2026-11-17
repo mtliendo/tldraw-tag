@@ -43,9 +43,22 @@ await join.waitForFunction(() => {
   return Boolean(b && !b.disabled);
 });
 await shot(join, "02-join.png");
+{
+  const dark = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    colorScheme: "dark",
+  });
+  const darkJoin = await dark.newPage();
+  await darkJoin.goto(`http://localhost:3000/join/${code}`, { waitUntil: "networkidle" });
+  await darkJoin.locator("input").fill("Ada");
+  await darkJoin.waitForTimeout(300);
+  await shot(darkJoin, "02c-join-dark.png");
+  await dark.close();
+}
 await join.getByRole("button", { name: /join/i }).click();
 await join.waitForURL(`**/play/${code}`);
-await join.waitForTimeout(1500);
+await join.waitForSelector("text=You're the", { timeout: 10000 });
+await join.waitForTimeout(400);
 await shot(join, "03-lobby.png");
 
 const phone = await browser.newContext({
@@ -90,7 +103,7 @@ await shot(admin, "05-shrinking-zone.png");
 await shot(screen, "05b-projector-zone.png");
 await assertBoard(screen, "05b-projector-zone");
 
-await admin.waitForSelector("text=was IT", { timeout: 30000 });
+await admin.waitForSelector("text=wins!", { timeout: 30000 });
 await admin.waitForTimeout(2400);
 await shot(admin, "06-leaderboard.png");
 await screen.waitForSelector("text=Play again", { timeout: 8000 });
@@ -111,7 +124,7 @@ await shot(screen, "06b-projector-end.png");
 await shot(joinPhone, "06c-player-mobile-end.png");
 
 await screen.getByRole("button", { name: /play again/i }).click();
-await admin.waitForFunction(() => !/was IT/i.test(document.body.innerText), { timeout: 10000 });
+await admin.waitForFunction(() => !/wins!/i.test(document.body.innerText), { timeout: 10000 });
 await joinPhone.waitForTimeout(900);
 await shot(joinPhone, "04d-player-mobile-r2.png");
 await assertBoard(joinPhone, "04d-player-mobile-r2", { follow: true });

@@ -13,41 +13,39 @@ export function QrPanel({
   compact?: boolean;
   projector?: boolean;
 }) {
-  const size = projector ? 168 : compact ? 108 : 196;
+  const size = projector ? 152 : compact ? 108 : 196;
   return (
     <div
       className="panel"
       style={{
-        padding: projector ? 16 : compact ? 10 : 16,
+        padding: projector ? 18 : compact ? 10 : 16,
         textAlign: "center",
-        background: projector ? "#fff" : undefined,
-        transform: projector ? "rotate(1.2deg)" : undefined,
+        background: "#fff",
       }}
     >
-      <div className="kicker" style={{ fontSize: projector ? 14 : undefined }}>
-        join
-      </div>
-      <div
-        className="code-xl"
-        style={{ fontSize: projector ? 56 : compact ? 28 : undefined, letterSpacing: "0.14em" }}
-      >
-        {code}
+      <div className="kicker" style={{ fontSize: projector ? 12 : undefined }}>
+        scan to join
       </div>
       <div
         style={{
           background: "white",
-          padding: 8,
-          border: "1.5px solid var(--ink)",
+          padding: 10,
           display: "inline-block",
-          marginTop: 8,
-          boxShadow: "var(--shadow)",
+          marginTop: 12,
+          borderRadius: 10,
         }}
       >
-        <QRCodeSVG value={value} size={size} level="M" />
+        <QRCodeSVG value={value} size={size} level="M" fgColor="#1D1D1F" bgColor="#FFFFFF" />
       </div>
-      {!compact && !projector && (
-        <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-          {value}
+      <div
+        className="code-xl"
+        style={{ fontSize: projector ? 52 : compact ? 28 : undefined, letterSpacing: "0.06em", marginTop: 8 }}
+      >
+        {code}
+      </div>
+      {!compact && (
+        <div className="muted" style={{ marginTop: 8, fontSize: 14 }}>
+          ink-tag.vercel.app
         </div>
       )}
     </div>

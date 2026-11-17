@@ -42,9 +42,9 @@ await assertBoard(joinPhone, "e2e-mobile", { follow: true });
 await admin.waitForTimeout(6500);
 await assertBoard(screen, "e2e-projector-shrink");
 
-await admin.waitForSelector("text=was IT", { timeout: 30000 });
+await admin.waitForSelector("text=wins!", { timeout: 30000 });
 await screen.getByRole("button", { name: /play again/i }).click();
-await admin.waitForFunction(() => !/was IT/i.test(document.body.innerText), { timeout: 10000 });
+await admin.waitForFunction(() => !/wins!/i.test(document.body.innerText), { timeout: 10000 });
 await joinPhone.waitForTimeout(900);
 await assertBoard(joinPhone, "e2e-mobile-r2", { follow: true });
 await assertBoard(screen, "e2e-projector-r2");

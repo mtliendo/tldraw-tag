@@ -10,8 +10,8 @@ export const PLAYER_SPEED = 210;
 export const SPEEDSTER_MULTIPLIER = 2.15;
 export const DIAGONAL_LIMIT = 1;
 export const PLAYER_TOKEN = 72;
-export const PLAYER_LABEL_H = 20;
-export const PLAYER_LABEL_W = 96;
+export const PLAYER_LABEL_H = 26;
+export const PLAYER_LABEL_W = 110;
 export const STROKE = 1.5;
 
 export const PLAYER_SEPARATION = PLAYER_RADIUS * 2;

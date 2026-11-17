@@ -2,18 +2,18 @@
 
 Live audience tag on a [tldraw](https://tldraw.dev) canvas. An admin creates a room, the crowd joins from their phones, and a projector shows the shrinking zone. The Colyseus server owns the simulation; browsers only send input and paint state.
 
-The whole UI stays in tldraw’s own visual language: Shantell Sans, the default light palette, hand-drawn strokes, doodle power-up stickers, and blob avatars on paper. Dark mode follows the OS if you want it; the default is a light sketchbook.
+The whole UI is Direction A (Clean tldraw): off-white dot-grid paper, Shantell Sans headings, Inter labels, orange-red for IT, and 13 critter avatars on a 72px hitbox. Dark mode keeps paper cards and inputs readable.
 
 ![INK TAG social preview](docs/social-preview.jpg)
 
 ## What it is
 
-A developer-advocate conference demo: twenty-plus people in a hall scan a QR, pick a cosmetic avatar, and play tag. Power-ups spawn in the zone. Whoever is **IT** when the timer hits zero loses. Score is time spent *not* being IT.
+A developer-advocate conference demo: twenty-plus people in a hall scan a QR, drop a name, and play tag. The server assigns each player a critter (all 13 before any repeats). Power-ups spawn in the zone. Whoever is **IT** when the timer hits zero loses. Score is time spent *not* being IT.
 
 | Role | Route | Auth |
 | --- | --- | --- |
 | Admin | `/admin` | Auth0 Universal Login (`@auth0/nextjs-auth0` v4). Local demos can use `DEV_BYPASS_AUTH`. |
-| Player | `/join/<code>` → `/play/<code>` | None. Name + avatar only. |
+| Player | `/join/<code>` → `/play/<code>` | None. Name only; a critter is assigned server-side. |
 | Projector | `/screen/<code>` | None. Read-only board + QR. |
 
 Simulated bots: open `/admin?bots=10` (or click **+10 bots**) so you can rehearse without a crowd.
@@ -169,7 +169,7 @@ Do not enable `DEV_BYPASS_AUTH` on Railway.
 
 - **Desktop:** WASD or arrows to move, space to fire the held power.
 - **Mobile:** on-screen joystick + one large power button.
-- Avatars are paint. Powers are loot that spawn after a ~1 s pulse warning. Holding a second power replaces the first.
+- Critters are assigned by the server (shuffled deck of 13, then hue-tinted repeats). Powers are loot that spawn after a ~1 s pulse warning. Holding a second power replaces the first.
 
 ## Screenshots
 
@@ -183,6 +183,8 @@ Do not enable `DEV_BYPASS_AUTH` on Railway.
 
 ![Join on a phone](docs/screenshots/02b-join-mobile.png)
 
+![Join in dark mode](docs/screenshots/02c-join-dark.png)
+
 ![Lobby](docs/screenshots/03-lobby.png)
 
 ![In-game power-ups](docs/screenshots/04-ingame-powers.png)
@@ -195,7 +197,11 @@ Do not enable `DEV_BYPASS_AUTH` on Railway.
 
 ![Shrinking zone](docs/screenshots/05-shrinking-zone.png)
 
+![Shrinking zone on projector](docs/screenshots/05b-projector-zone.png)
+
 ![Leaderboard](docs/screenshots/06-leaderboard.png)
+
+![Projector end](docs/screenshots/06b-projector-end.png)
 
 ![Phone end](docs/screenshots/06c-player-mobile-end.png)
 

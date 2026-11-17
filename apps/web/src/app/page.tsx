@@ -11,7 +11,7 @@ export default function HomePage() {
     <main className="home-grid">
       <section style={{ padding: "8vh 8vw" }}>
         <div className="kicker">tldraw × Colyseus × Auth0</div>
-        <h1 style={{ fontSize: "clamp(64px, 10vw, 128px)", lineHeight: 0.9, transform: "rotate(-1.5deg)" }}>
+        <h1 style={{ fontSize: "clamp(64px, 10vw, 128px)", lineHeight: 0.9 }}>
           INK TAG
         </h1>
         <p style={{ fontSize: 22, maxWidth: 520, color: "var(--muted)" }}>
@@ -57,11 +57,11 @@ export default function HomePage() {
           padding: 40,
         }}
       >
-        <div className="panel sticky-note" style={{ padding: 24, maxWidth: 380, transform: "rotate(1.2deg)" }}>
+        <div className="panel" style={{ padding: 24, maxWidth: 380 }}>
           <div className="kicker">How it plays</div>
           <ol style={{ paddingLeft: 18, lineHeight: 1.6 }}>
             <li>Admin signs in, creates a room, throws the QR on a projector.</li>
-            <li>The crowd joins from their phones. Avatars are doodles; powers are stickers.</li>
+            <li>The crowd joins from their phones. Each player gets a critter; powers are stickers.</li>
             <li>Whoever is IT at the buzzer loses. Time spent not-IT is your score.</li>
           </ol>
         </div>

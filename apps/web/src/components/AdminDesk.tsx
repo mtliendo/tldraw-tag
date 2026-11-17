@@ -110,8 +110,7 @@ export function AdminDesk({
                       color: POWER_UPS[id].ink,
                       fontWeight: 700,
                       padding: "1px 8px",
-                      border: "1.5px solid var(--ink)",
-                      transform: "rotate(-2deg)",
+                      border: "1.5px solid var(--line)",
                     }}
                   >
                     {POWER_UPS[id].label}
@@ -207,7 +206,7 @@ export function AdminDesk({
                   gap: 16,
                   padding: 48,
                   zIndex: 9,
-                  background: "rgba(247,249,251,0.45)",
+                  background: "color-mix(in srgb, var(--page) 78%, transparent)",
                 }}
               >
                 <Leaderboard view={view} overlay />

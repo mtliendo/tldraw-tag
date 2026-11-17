@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { minZoneSize } from "@inkt/shared";
-import { crowdLabelScale, layoutPlayers } from "./layoutPlayers";
+import { crowdLabelScale, layoutPlayers, liveLabelScale } from "./layoutPlayers";
 import type { ViewPlayer } from "./types";
 
 function player(i: number, x: number, y: number, extra: Partial<ViewPlayer> = {}): ViewPlayer {
@@ -32,6 +32,7 @@ describe("layoutPlayers", () => {
     assert.equal(crowdLabelScale(8, 1.5), 1.5);
     assert.ok(crowdLabelScale(20, 1.5) < 1.2);
     assert.ok(crowdLabelScale(20, 1.5) > 0.9);
+    assert.ok(liveLabelScale(20, 1.5, { w: 480, h: 270 }) < crowdLabelScale(20, 1.5));
   });
 
   it("shows every name for 20 packed players", () => {

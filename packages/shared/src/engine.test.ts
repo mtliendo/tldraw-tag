@@ -435,4 +435,19 @@ describe("TagEngine loop", () => {
     }
     assert.ok(maxStep < cap, `max per-tick displacement ${maxStep.toFixed(1)} exceeded ${cap}`);
   });
+
+  it("deals every critter before repeating, shared with bots", () => {
+    const engine = new TagEngine({ rand: rng(7) });
+    engine.spawnBots(10);
+    engine.addPlayer({ name: "Ada" });
+    engine.addPlayer({ name: "Bea" });
+    engine.addPlayer({ name: "Cyd" });
+    const dealt = Object.values(engine.state.players).map((p) => p.avatar);
+    assert.equal(dealt.length, 13);
+    assert.equal(new Set(dealt).size, 13);
+    engine.addPlayer({ name: "Dot" });
+    const again = Object.values(engine.state.players).map((p) => p.avatar);
+    assert.equal(again.length, 14);
+    assert.equal(new Set(again).size, 13);
+  });
 });

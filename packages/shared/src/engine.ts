@@ -97,6 +97,8 @@ export class TagEngine {
   private rand: () => number;
   private seq = 0;
   private dt = TICK_DT;
+  private avatarBag: string[] = [];
+  private lastDealtAvatar = "";
 
   constructor(opts?: {
     code?: string;
@@ -156,7 +158,7 @@ export class TagEngine {
     id?: string;
     sessionId?: string;
     name: string;
-    avatar: string;
+    avatar?: string;
     isBot?: boolean;
   }): EnginePlayer {
     const players = Object.values(this.state.players);
@@ -169,7 +171,7 @@ export class TagEngine {
       id,
       sessionId: opts.sessionId ?? "",
       name: sanitizeName(opts.name),
-      avatar: opts.avatar,
+      avatar: this.nextAvatar(),
       x: spawn.x,
       y: spawn.y,
       vx: 0,
@@ -215,15 +217,32 @@ export class TagEngine {
     const roomLeft = MAX_PLAYERS - Object.keys(this.state.players).length;
     const n = Math.max(0, Math.min(count, roomLeft, 24 - existingBots));
     for (let i = 0; i < n; i++) {
-      const avatar = AVATARS[Math.floor(this.rand() * AVATARS.length)];
       const name = BOT_NAMES[(existingBots + i) % BOT_NAMES.length];
       this.addPlayer({
         name: `${name}`,
-        avatar: avatar.id,
         isBot: true,
         id: uid("bot"),
       });
     }
+  }
+
+  /** Shuffle all 13 critters, deal each once, then reshuffle. Shared by humans and bots. */
+  private nextAvatar(): string {
+    if (this.avatarBag.length === 0) {
+      const ids = AVATARS.map((a) => a.id);
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(this.rand() * (i + 1));
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+      }
+      if (this.lastDealtAvatar && ids.length > 1 && ids[ids.length - 1] === this.lastDealtAvatar) {
+        const swap = ids.findIndex((id) => id !== this.lastDealtAvatar);
+        if (swap >= 0) [ids[ids.length - 1], ids[swap]] = [ids[swap], ids[ids.length - 1]];
+      }
+      this.avatarBag = ids;
+    }
+    const id = this.avatarBag.pop()!;
+    this.lastDealtAvatar = id;
+    return id;
   }
 
   setInput(id: string, input: Partial<InputState>) {

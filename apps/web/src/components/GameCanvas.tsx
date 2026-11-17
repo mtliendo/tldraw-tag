@@ -12,7 +12,8 @@ import {
   ZONE_WARN_SECONDS,
 } from "@inkt/shared";
 import { INKT_SHAPES } from "@/shapes/inkt-shapes";
-import { crowdLabelScale, layoutPlayers } from "@/game/layoutPlayers";
+import { liveLabelScale, layoutPlayers } from "@/game/layoutPlayers";
+import { avatarTintIndex } from "@inkt/shared";
 import type { ViewState } from "@/game/types";
 import { Confetti } from "@/components/Confetti";
 
@@ -124,7 +125,7 @@ export function GameCanvas({
 
       const warning =
         !state.shrinking && state.shrinkIn > 0 && state.shrinkIn <= ZONE_WARN_SECONDS ? 1 : 0;
-      const scale = crowdLabelScale(state.players.length, labelScaleRef.current);
+      const scale = liveLabelScale(state.players.length, labelScaleRef.current, state.zone);
 
       make("arena", {
         type: "inkt-arena",
@@ -261,6 +262,9 @@ export function GameCanvas({
               joinFlash,
               playerId: p.id,
               labelScale: scale,
+              vx: p.vx,
+              vy: p.vy,
+              tint: avatarTintIndex(state.players, p.id, p.avatar),
             },
           }),
         );
@@ -316,7 +320,7 @@ export function GameCanvas({
     <div
       ref={wrapRef}
       className={interactive ? "board-wrap interactive" : "board-wrap"}
-      style={{ ["--inkt-label-scale" as string]: String(crowdLabelScale(view.players.length, labelScale)) }}
+      style={{ ["--inkt-label-scale" as string]: String(liveLabelScale(view.players.length, labelScale, view.zone)) }}
       onPointerOver={(e) => {
         if (!interactive) return;
         const el = (e.target as HTMLElement).closest("[data-player-id]");

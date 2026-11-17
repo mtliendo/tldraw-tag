@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 
 const BITS = [
-  { left: "8%", delay: "0s", color: "#f1ac4b", rotate: -12, kind: "star" },
-  { left: "18%", delay: "0.12s", color: "#4465e9", rotate: 18, kind: "dot" },
-  { left: "28%", delay: "0.05s", color: "#e03131", rotate: -8, kind: "squiggle" },
-  { left: "40%", delay: "0.22s", color: "#099268", rotate: 24, kind: "star" },
-  { left: "52%", delay: "0.08s", color: "#e16919", rotate: -20, kind: "dot" },
-  { left: "64%", delay: "0.18s", color: "#9fa8b2", rotate: 10, kind: "note" },
-  { left: "76%", delay: "0.03s", color: "#f1ac4b", rotate: -16, kind: "star" },
-  { left: "88%", delay: "0.27s", color: "#4465e9", rotate: 8, kind: "squiggle" },
+  { left: "8%", delay: "0s", color: "#F4B63F", rotate: -12, kind: "star" },
+  { left: "18%", delay: "0.12s", color: "#4465E9", rotate: 18, kind: "dot" },
+  { left: "28%", delay: "0.05s", color: "#E8542F", rotate: -8, kind: "squiggle" },
+  { left: "40%", delay: "0.22s", color: "#1E9E6A", rotate: 24, kind: "star" },
+  { left: "52%", delay: "0.08s", color: "#F28A3C", rotate: -20, kind: "dot" },
+  { left: "64%", delay: "0.18s", color: "#A78BFA", rotate: 10, kind: "note" },
+  { left: "76%", delay: "0.03s", color: "#F4B63F", rotate: -16, kind: "star" },
+  { left: "88%", delay: "0.27s", color: "#4465E9", rotate: 8, kind: "squiggle" },
 ];
 
 function Bit({ kind, color }: { kind: string; color: string }) {

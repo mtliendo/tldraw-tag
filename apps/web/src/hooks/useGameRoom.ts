@@ -14,7 +14,6 @@ export function useGameRoom(opts: {
   code?: string;
   create?: boolean;
   name?: string;
-  avatar?: string;
   accessToken?: string | null;
   bots?: number;
   roundLength?: number;
@@ -59,7 +58,6 @@ export function useGameRoom(opts: {
           role: opts.role,
           accessToken: opts.accessToken,
           name: opts.name,
-          avatar: opts.avatar,
           bots: opts.bots,
           roundLength: opts.roundLength,
           shrinkInterval: opts.shrinkInterval,
@@ -122,7 +120,6 @@ export function useGameRoom(opts: {
     opts.code,
     opts.role,
     opts.name,
-    opts.avatar,
     opts.accessToken,
     opts.bots,
   ]);

@@ -114,7 +114,6 @@ export class TagRoom extends Room<{ state: GameState }> {
     this.engine.addPlayer({
       sessionId: client.sessionId,
       name: String(options.name ?? "Player"),
-      avatar: String(options.avatar ?? "bolt"),
     });
     this.sync();
   }

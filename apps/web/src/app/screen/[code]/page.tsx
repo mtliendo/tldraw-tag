@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { POWER_UPS, avatarById, formatTime, phaseStatus, type PowerId } from "@inkt/shared";
+import { POWER_UPS, avatarTintIndex, formatTime, phaseStatus, type PowerId } from "@inkt/shared";
 import { useGameRoom } from "@/hooks/useGameRoom";
 import { GameCanvas } from "@/components/GameCanvas";
 import { QrPanel } from "@/components/QrPanel";
 import { Leaderboard } from "@/components/Leaderboard";
 import { PlayAgain } from "@/components/PlayAgain";
-import { AvatarGlyph } from "@/components/AvatarGlyph";
+import { CritterThumb } from "@/components/Critter";
+import { PowerGlyph } from "@/components/PowerGlyph";
 import { joinUrl } from "@/lib/colyseus";
 import { isItCallout } from "@/game/callouts";
 
@@ -40,7 +41,6 @@ export default function ScreenPage() {
     enabled: Boolean(code) && adminToken !== undefined,
   });
   const it = view.players.find((p) => p.isIt);
-  const itAvatar = avatarById(it?.avatar);
   const itPower = it?.powerId ? POWER_UPS[it.powerId as PowerId] : null;
   const ended = view.phase === "ended";
   const callout = announce && !isItCallout(announce) ? announce : "";
@@ -67,40 +67,40 @@ export default function ScreenPage() {
       style={{
         height: "100vh",
         display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) 280px",
-        background: "var(--paper)",
+        gridTemplateColumns: "minmax(0, 1fr) 252px",
+        background: "var(--page)",
       }}
     >
       <section style={{ position: "relative", minWidth: 0, minHeight: 0, height: "100%" }}>
         <GameCanvas view={view} interactive labelScale={1.5} followZone />
 
-        <div
-          style={{
-            position: "absolute",
-            top: 18,
-            left: 18,
-            zIndex: 6,
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-          }}
-        >
-          <div className="display" style={{ fontSize: 22, letterSpacing: "0.08em" }}>
+        <div style={{ position: "absolute", top: 18, left: 24, zIndex: 6 }}>
+          <div className="display" style={{ fontSize: 20 }}>
             ink tag
           </div>
           <div
+            className="display"
             style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 96,
-              lineHeight: 0.9,
-              letterSpacing: 2,
-              fontWeight: 800,
+              fontSize: 64,
+              lineHeight: 1,
+              fontWeight: 700,
+              fontVariantNumeric: "tabular-nums",
             }}
           >
             {ended ? "final" : formatTime(view.timeLeft)}
           </div>
-          <div className="chip" style={{ fontSize: 18, width: "fit-content" }}>
+          <div className="chip" style={{ marginTop: 8, width: "fit-content" }}>
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "var(--safe)",
+                boxShadow: "0 0 0 3px color-mix(in srgb, var(--safe) 25%, transparent)",
+              }}
+            />
             {phaseStatus(view)}
+            {view.players.length ? ` · ${view.players.length} players` : ""}
           </div>
         </div>
 
@@ -115,52 +115,44 @@ export default function ScreenPage() {
             }}
           >
             <div
-              className="panel"
+              className="panel it-chip"
               style={{
-                padding: "14px 28px",
+                padding: "12px 20px 12px 14px",
                 display: "flex",
                 alignItems: "center",
-                gap: 16,
-                background: "#f87777",
-                transform: "rotate(-1deg)",
+                gap: 14,
+                borderRadius: 14,
               }}
             >
               {it && (
-                <div
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: "48% 52% 46% 54%",
-                    background: itAvatar.color,
-                    display: "grid",
-                    placeItems: "center",
-                    border: "1.5px solid var(--ink)",
-                  }}
-                >
-                  <AvatarGlyph glyph={itAvatar.glyph} accent={itAvatar.accent} size={32} />
-                </div>
+                <CritterThumb
+                  avatar={it.avatar}
+                  size={56}
+                  isIt
+                  tint={avatarTintIndex(view.players, it.id, it.avatar)}
+                />
               )}
               <div>
-                <div className="kicker" style={{ color: "var(--ink)", fontSize: 14 }}>
+                <div className="kicker" style={{ color: "var(--it)" }}>
                   currently it
                 </div>
-                <div className="display" style={{ fontSize: 42, lineHeight: 1 }}>
+                <div className="display" style={{ fontSize: 30, lineHeight: 1.1 }}>
                   {view.itName || "Waiting"}
                 </div>
                 {itPower && (
-                  <div className="muted" style={{ fontWeight: 700 }}>
+                  <div className="muted" style={{ fontWeight: 600, fontSize: 15 }}>
                     holding {itPower.label}
                   </div>
                 )}
               </div>
             </div>
             {callout && (
-              <div className="chip sticky-note" style={{ marginTop: 10, fontSize: 22 }}>
+              <div className="chip sticky-note" style={{ marginTop: 10, fontSize: 18 }}>
                 {callout}
               </div>
             )}
             {joinFlash && (
-              <div className="chip sticky-note" style={{ marginTop: 10, fontSize: 20 }}>
+              <div className="chip sticky-note" style={{ marginTop: 10, fontSize: 18 }}>
                 {joinFlash}
               </div>
             )}
@@ -178,7 +170,7 @@ export default function ScreenPage() {
               gap: 16,
               padding: "28px 24px",
               zIndex: 9,
-              background: "rgba(247,249,251,0.55)",
+              background: "color-mix(in srgb, var(--page) 82%, transparent)",
             }}
           >
             <Leaderboard view={view} overlay />
@@ -196,14 +188,77 @@ export default function ScreenPage() {
         style={{
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
+          gap: 16,
           padding: 16,
-          borderLeft: "1.5px solid var(--ink)",
-          background: "#fff",
+          borderLeft: "1.5px solid var(--line)",
+          background: "var(--page)",
+          overflow: "auto",
         }}
       >
         <QrPanel value={joinUrl(code)} code={view.code || code} projector />
+        {!ended && (
+          <div className="panel" style={{ padding: 18 }}>
+            <div className="kicker">zone shrinks in</div>
+            <div className="display" style={{ fontSize: 26, marginTop: 6 }}>
+              {view.shrinking ? "now" : formatTime(view.shrinkIn)}
+            </div>
+            <div
+              style={{
+                height: 6,
+                borderRadius: 99,
+                background: "var(--hair)",
+                margin: "12px 0 8px",
+                overflow: "hidden",
+              }}
+            >
+              <i
+                style={{
+                  display: "block",
+                  height: "100%",
+                  width: `${Math.max(8, Math.min(100, (1 - view.shrinkIn / Math.max(1, view.roundLength)) * 100))}%`,
+                  background: "var(--zone)",
+                  borderRadius: 99,
+                }}
+              />
+            </div>
+            <div className="muted" style={{ fontSize: 13 }}>
+              {view.players.length} on the board
+            </div>
+          </div>
+        )}
+        <div className="panel" style={{ padding: 18 }}>
+          <div className="kicker" style={{ marginBottom: 10 }}>
+            powers
+          </div>
+          {Object.values(POWER_UPS).map((p) => (
+            <div
+              key={p.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                fontWeight: 600,
+                fontSize: 15,
+                padding: "4px 0",
+              }}
+            >
+              <span
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 7,
+                  background: p.color,
+                  display: "grid",
+                  placeItems: "center",
+                  border: "1px solid var(--line)",
+                }}
+              >
+                <PowerGlyph icon={p.icon} color={p.ink} size={14} />
+              </span>
+              {p.label}
+            </div>
+          ))}
+        </div>
       </aside>
     </main>
   );

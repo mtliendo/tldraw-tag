@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Shantell_Sans } from "next/font/google";
+import { Inter, Shantell_Sans } from "next/font/google";
 import { Auth0Provider } from "@auth0/nextjs-auth0/client";
 import { auth0 } from "@/lib/auth0";
 import "./globals.css";
@@ -8,6 +8,12 @@ const draw = Shantell_Sans({
   subsets: ["latin"],
   variable: "--font-draw",
   weight: ["400", "500", "600", "700", "800"],
+});
+
+const ui = Inter({
+  subsets: ["latin"],
+  variable: "--font-ui",
+  weight: ["500", "600", "700", "800"],
 });
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || "http://localhost:3000";
@@ -32,8 +38,8 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = auth0 ? await auth0.getSession() : null;
   return (
-    <html lang="en" className={draw.variable}>
-      <body className={draw.className}>
+    <html lang="en" className={`${draw.variable} ${ui.variable}`}>
+      <body className={ui.className}>
         <Auth0Provider user={session?.user}>{children}</Auth0Provider>
       </body>
     </html>

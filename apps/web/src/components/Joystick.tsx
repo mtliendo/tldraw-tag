@@ -1,13 +1,18 @@
 "use client";
 
 import { useRef } from "react";
+import { CritterThumb } from "@/components/Critter";
 
 export function Joystick({
   onChange,
   compact = false,
+  avatar,
+  tint = 0,
 }: {
   onChange: (x: number, y: number) => void;
   compact?: boolean;
+  avatar?: string;
+  tint?: number;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const knob = useRef<HTMLDivElement>(null);
@@ -38,6 +43,9 @@ export function Joystick({
     onChange(0, 0);
   };
 
+  const size = compact ? 126 : 156;
+  const knobSize = compact ? 52 : 64;
+
   return (
     <div
       ref={root}
@@ -53,41 +61,45 @@ export function Joystick({
       onPointerUp={end}
       onPointerCancel={end}
       style={{
-        width: compact ? 118 : 156,
-        height: compact ? 118 : 156,
-        borderRadius: "48% 52% 46% 54%",
-        background: "#FCE19C",
-        border: "1.5px solid var(--ink)",
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: "#F1F0EC",
+        border: "1.5px solid var(--line)",
         position: "relative",
         touchAction: "none",
-        boxShadow: "var(--shadow)",
       }}
       aria-label="Move"
     >
       <div
         ref={knob}
         style={{
-          width: compact ? 48 : 64,
-          height: compact ? 48 : 64,
-          borderRadius: "46% 54% 50% 50%",
-          background: "#4ba1f1",
-          border: "1.5px solid var(--ink)",
+          width: knobSize,
+          height: knobSize,
+          borderRadius: "50%",
+          background: "#fff",
+          border: "1.5px solid var(--line)",
           position: "absolute",
           left: "50%",
           top: "50%",
-          margin: compact ? "-24px 0 0 -24px" : "-32px 0 0 -32px",
-          boxShadow: "var(--shadow)",
+          margin: `${-knobSize / 2}px 0 0 ${-knobSize / 2}px`,
+          boxShadow: "0 3px 0 rgba(29,29,31,.15)",
+          overflow: "hidden",
+          display: "grid",
+          placeItems: "center",
         }}
-      />
+      >
+        {avatar ? <CritterThumb avatar={avatar} size={knobSize - 4} tint={tint} /> : null}
+      </div>
       <div
         className="kicker"
         style={{
           position: "absolute",
           left: 0,
           right: 0,
-          bottom: compact ? 8 : -22,
+          bottom: -20,
           textAlign: "center",
-          color: "var(--ink)",
+          color: "var(--muted)",
         }}
       >
         move

@@ -20,7 +20,7 @@ type Rect = { x: number; y: number; w: number; h: number };
 type Slot = { side: LabelSide; ox: number; oy: number };
 
 const ALWAYS_SHOW = 22;
-const CLEAR = 3;
+const CLEAR = 5;
 
 export function crowdLabelScale(n: number, base = 1) {
   if (n <= 10) return base;
@@ -29,9 +29,23 @@ export function crowdLabelScale(n: number, base = 1) {
   return base * 0.6;
 }
 
+/** Shrink pills further once the zone is a small fraction of the arena. */
+export function liveLabelScale(
+  n: number,
+  base: number,
+  zone: { w: number; h: number },
+  arena = { w: 1600, h: 900 },
+) {
+  let s = crowdLabelScale(n, base);
+  const ratio = (zone.w * zone.h) / (arena.w * arena.h);
+  if (ratio < 0.55) s *= 0.86;
+  if (ratio < 0.35) s *= 0.86;
+  return s;
+}
+
 function labelWidth(name: string, scale: number, kind: "it" | "you" | "plain") {
-  const text = kind === "it" ? `it · ${name}` : kind === "you" ? `you · ${name}` : name;
-  return Math.min(110 * scale, Math.max(28 * scale, (14 + text.length * 7.4) * scale));
+  const text = kind === "it" ? `IT ${name}` : kind === "you" ? `${name} you` : name;
+  return Math.min(132 * scale, Math.max(36 * scale, (24 + text.length * 8.2) * scale));
 }
 
 function overlapArea(a: Rect, b: Rect, pad = 0) {
@@ -125,7 +139,7 @@ export function layoutPlayers(
 ): LaidOutPlayer[] {
   const r = PLAYER_TOKEN / 2;
   const lh = PLAYER_LABEL_H * labelScale + 2;
-  const gaps = [8 * Math.max(0.85, labelScale), 12 * Math.max(0.85, labelScale), 16 * Math.max(0.85, labelScale)];
+  const gaps = [10 * Math.max(0.85, labelScale), 14 * Math.max(0.85, labelScale), 20 * Math.max(0.85, labelScale), 28 * Math.max(0.85, labelScale)];
   const laid: LaidOutPlayer[] = players.map((p) => ({
     ...p,
     labelX: 0,
@@ -213,5 +227,44 @@ export function layoutPlayers(
     taken.push(p);
   }
 
+  separateLabels(taken, laid, clampTo);
+
   return laid;
+}
+
+function labelBox(p: LaidOutPlayer): Rect {
+  return {
+    x: p.x + p.labelX - p.labelW / 2,
+    y: p.y + p.labelY - p.labelH / 2,
+    w: p.labelW,
+    h: p.labelH,
+  };
+}
+
+function separateLabels(taken: LaidOutPlayer[], blobs: LaidOutPlayer[], clampTo: Rect) {
+  for (let iter = 0; iter < 8; iter++) {
+    for (const p of taken) {
+      let rect = labelBox(p);
+      for (const q of taken) {
+        if (q.id === p.id) continue;
+        if (overlapArea(rect, labelBox(q), 2) === 0) continue;
+        const dx = p.x + p.labelX - (q.x + q.labelX);
+        const dy = p.y + p.labelY - (q.y + q.labelY);
+        rect.x += (dx === 0 ? 1 : Math.sign(dx)) * 4;
+        rect.y += (dy === 0 ? 1 : Math.sign(dy)) * 3;
+      }
+      for (const q of blobs) {
+        const blob = { x: q.x - PLAYER_TOKEN / 2, y: q.y - PLAYER_TOKEN / 2, w: PLAYER_TOKEN, h: PLAYER_TOKEN };
+        if (overlapArea(rect, blob, 2) === 0) continue;
+        rect.x += (rect.x + rect.w / 2 - q.x >= 0 ? 1 : -1) * 5;
+        rect.y += (rect.y + rect.h / 2 - q.y >= 0 ? 1 : -1) * 5;
+      }
+      rect = clampRect(rect, clampTo, 4);
+      p.labelX = rect.x + rect.w / 2 - p.x;
+      p.labelY = rect.y + rect.h / 2 - p.y;
+      p.labelLeader =
+        Math.hypot(p.labelX, p.labelY) > PLAYER_TOKEN / 2 + 14 ||
+        Math.abs(p.labelX) > p.labelW / 2;
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { PLAYER_TOKEN } from "@inkt/shared";
+import { PLAYER_TOKEN, avatarById } from "@inkt/shared";
 import type { ViewState } from "@/game/types";
 
 export function Minimap({
@@ -24,9 +24,9 @@ export function Minimap({
         right: compact ? undefined : 10,
         top: compact ? undefined : 10,
         zIndex: 7,
-        background: "rgba(255,255,255,0.52)",
-        border: "1.5px solid var(--ink)",
-        borderRadius: 8,
+        background: "rgba(255,255,255,0.92)",
+        border: "1px solid var(--hair)",
+        borderRadius: 10,
         padding: compact ? 3 : 4,
         pointerEvents: "none",
         flexShrink: 0,
@@ -48,7 +48,7 @@ export function Minimap({
             cx={sx(p.x)}
             cy={sy(p.y)}
             r={p.id === selfId || p.isIt ? r + 1 : r}
-            fill={p.isIt ? "#e03131" : p.id === selfId ? "#4ba1f1" : "#1d1d1d"}
+            fill={p.isIt ? "#E8542F" : p.id === selfId ? "#4465E9" : avatarById(p.avatar).color}
             opacity={p.id === selfId || p.isIt ? 1 : 0.5}
           />
         ))}

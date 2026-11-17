@@ -1,7 +1,8 @@
 "use client";
 
-import { formatTime, phaseStatus, POWER_UPS, type PowerId } from "@inkt/shared";
+import { avatarTintIndex, formatTime, phaseStatus, POWER_UPS, type PowerId } from "@inkt/shared";
 import type { ViewState } from "@/game/types";
+import { CritterThumb } from "@/components/Critter";
 
 export function TopHud({
   view,
@@ -11,29 +12,40 @@ export function TopHud({
   selfPower?: { id: string; charges: number };
 }) {
   const def = selfPower?.id ? POWER_UPS[selfPower.id as PowerId] : null;
+  const it = view.players.find((p) => p.isIt);
   return (
     <div
       style={{
         display: "flex",
-        gap: 10,
+        gap: 8,
         alignItems: "center",
         flexWrap: "wrap",
       }}
     >
-      <div className="chip" style={{ fontSize: 22 }}>
+      <div className="chip" style={{ fontFamily: "var(--font-display)", fontSize: 21, fontWeight: 700 }}>
         {view.phase === "ended" ? "final" : formatTime(view.timeLeft)}
       </div>
       {view.phase !== "ended" && (
-        <div className="chip" style={{ background: view.itName ? "#f87777" : undefined }}>
-          <span className="kicker" style={{ margin: 0 }}>
-            it
+        <div className="chip it-chip">
+          {it && (
+            <CritterThumb
+              avatar={it.avatar}
+              size={28}
+              isIt
+              tint={avatarTintIndex(view.players, it.id, it.avatar)}
+            />
+          )}
+          <span>
+            <span className="kicker" style={{ color: "var(--it)", margin: 0, display: "block" }}>
+              it
+            </span>
+            <strong style={{ fontSize: 15 }}>{view.itName || "—"}</strong>
           </span>
-          <strong>{view.itName || "—"}</strong>
         </div>
       )}
       <div className="chip">{phaseStatus(view)}</div>
       {def && (
-        <div className="chip" style={{ background: def.color, color: def.ink }}>
+        <div className="chip" style={{ background: def.color, color: def.ink, borderColor: "var(--line)" }}>
           {def.label} · {selfPower?.charges}
         </div>
       )}

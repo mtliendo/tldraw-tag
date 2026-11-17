@@ -16,6 +16,7 @@ export function PowerButton({
 }) {
   const def = POWER_UPS[powerId as PowerId];
   const ready = Boolean(def) && charges > 0;
+  const size = compact ? 120 : 132;
   return (
     <button
       type="button"
@@ -25,28 +26,44 @@ export function PowerButton({
       }}
       disabled={!ready}
       style={{
-        width: compact ? 96 : 132,
-        height: compact ? 96 : 132,
-        borderRadius: 8,
-        border: "1.5px solid var(--ink)",
-        background: ready ? def.color : "#C0CAD3",
+        width: size,
+        height: size,
+        borderRadius: 28,
+        border: "1.5px solid var(--line)",
+        background: "#fff",
         color: "var(--ink)",
-        fontWeight: 800,
-        letterSpacing: 0.4,
-        fontSize: compact ? 14 : 18,
-        boxShadow: "var(--shadow)",
+        fontWeight: 700,
+        fontSize: compact ? 15 : 18,
+        boxShadow: ready ? "0 3px 0 #1D1D1F" : "none",
         touchAction: "manipulation",
-        transform: "rotate(3deg)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        opacity: ready ? 1 : 0.45,
       }}
     >
       {ready ? (
-        <span style={{ display: "grid", placeItems: "center", gap: 4 }}>
-          <PowerGlyph icon={def.icon} color={def.ink} size={compact ? 28 : 36} />
-          {def.verb}
-          <small>
-            {charges} left
-          </small>
-        </span>
+        <>
+          <span
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 14,
+              background: def.color,
+              display: "grid",
+              placeItems: "center",
+              border: "1.5px solid var(--line)",
+            }}
+          >
+            <PowerGlyph icon={def.icon} color={def.ink} size={compact ? 26 : 28} />
+          </span>
+          <span>{def.label}</span>
+          <span className="muted" style={{ fontSize: 12, fontWeight: 500 }}>
+            tap to {def.verb}
+          </span>
+        </>
       ) : (
         "power"
       )}

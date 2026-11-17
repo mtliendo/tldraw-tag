@@ -9,10 +9,9 @@ import {
   type RecordProps,
   type TLShape,
 } from "tldraw";
-import { POWER_UPS, STROKE, avatarById, type PowerId } from "@inkt/shared";
-import { AvatarGlyph } from "@/components/AvatarGlyph";
+import { POWER_UPS, STROKE, type PowerId } from "@inkt/shared";
+import { Critter } from "@/components/Critter";
 import { PowerGlyph } from "@/components/PowerGlyph";
-import { blobPath, wobbleRectPath } from "./wobble";
 
 declare module "tldraw" {
   export interface TLGlobalShapePropsMap {
@@ -45,6 +44,9 @@ declare module "tldraw" {
       joinFlash: boolean;
       playerId: string;
       labelScale: number;
+      vx: number;
+      vy: number;
+      tint: number;
     };
     "inkt-power": { w: number; h: number; kind: string };
     "inkt-pulse": { w: number; h: number; kind: string; progress: number };
@@ -73,34 +75,6 @@ function RectIndicator({ w, h }: { w: number; h: number }) {
   return <rect width={w} height={h} />;
 }
 
-function DrawRect({
-  w,
-  h,
-  color,
-  seed,
-  dash,
-}: {
-  w: number;
-  h: number;
-  color: string;
-  seed?: number;
-  dash?: string;
-}) {
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none" style={{ overflow: "visible" }}>
-      <path
-        d={wobbleRectPath(w, h, seed ?? 1, dash ? 1.6 : 2.2)}
-        stroke={color}
-        strokeWidth={STROKE}
-        strokeDasharray={dash}
-        opacity={dash ? 0.55 : 1}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export class ArenaShapeUtil extends ShapeUtil<ArenaShape> {
   static override type = "inkt-arena" as const;
   static override props: RecordProps<ArenaShape> = { w: T.number, h: T.number };
@@ -117,10 +91,10 @@ export class ArenaShapeUtil extends ShapeUtil<ArenaShape> {
         <svg width={w} height={h} style={{ position: "absolute", inset: 0 }}>
           <defs>
             <pattern id="inkt-dots" width="24" height="24" patternUnits="userSpaceOnUse">
-              <circle cx="1.2" cy="1.2" r="0.9" fill="rgba(29,29,29,0.08)" />
+              <circle cx="1.2" cy="1.2" r="1.2" fill="#D9D8D1" />
             </pattern>
           </defs>
-          <rect width={w} height={h} fill="#f7f9fb" />
+          <rect width={w} height={h} fill="#FCFCFA" />
           <rect width={w} height={h} fill="url(#inkt-dots)" />
         </svg>
       </HTMLContainer>
@@ -161,7 +135,13 @@ export class DimShapeUtil extends ShapeUtil<DimShape> {
     return (
       <HTMLContainer>
         <svg width={w} height={h} style={{ pointerEvents: "none" }}>
-          <path fill="rgba(29,29,29,0.05)" fillRule="evenodd" d={`M0 0H${w}V${h}H0Z M${hx} ${hy}h${hw}v${hh}h${-hw}Z`} />
+          <defs>
+            <pattern id="inkt-oob" width="11" height="11" patternUnits="userSpaceOnUse" patternTransform="rotate(135)">
+              <rect width="11" height="11" fill="#F1F0EC" />
+              <rect width="1.5" height="11" fill="#E9E8E3" />
+            </pattern>
+          </defs>
+          <path fill="url(#inkt-oob)" fillRule="evenodd" d={`M0 0H${w}V${h}H0Z M${hx} ${hy}h${hw}v${hh}h${-hw}Z`} />
         </svg>
       </HTMLContainer>
     );
@@ -192,11 +172,23 @@ export class ZoneShapeUtil extends ShapeUtil<ZoneShape> {
     return new Rectangle2d({ width: shape.props.w, height: shape.props.h, isFilled: false });
   }
   component(shape: ZoneShape) {
-    const color = shape.props.shrinking || shape.props.warn > 0.05 ? "#e16919" : "#1d1d1d";
+    const color = "#E8542F";
+    const { w, h } = shape.props;
     return (
       <HTMLContainer>
-        <div data-inkt="zone" style={{ width: shape.props.w, height: shape.props.h, pointerEvents: "none" }}>
-          <DrawRect w={shape.props.w} h={shape.props.h} color={color} seed={2} />
+        <div data-inkt="zone" style={{ width: w, height: h, pointerEvents: "none" }}>
+          <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none" style={{ overflow: "visible" }}>
+            <rect
+              x="1"
+              y="1"
+              width={Math.max(0, w - 2)}
+              height={Math.max(0, h - 2)}
+              rx="16"
+              ry="16"
+              stroke={color}
+              strokeWidth="2"
+            />
+          </svg>
         </div>
       </HTMLContainer>
     );
@@ -230,7 +222,20 @@ export class NextZoneShapeUtil extends ShapeUtil<NextZoneShape> {
     return (
       <HTMLContainer>
         <div style={{ width: shape.props.w, height: shape.props.h, pointerEvents: "none" }}>
-          <DrawRect w={shape.props.w} h={shape.props.h} color="#e16919" seed={5} dash="10 12" />
+          <svg width={shape.props.w} height={shape.props.h} fill="none" style={{ overflow: "visible" }}>
+            <rect
+              x="1"
+              y="1"
+              width={Math.max(0, shape.props.w - 2)}
+              height={Math.max(0, shape.props.h - 2)}
+              rx="16"
+              ry="16"
+              stroke="#F0A58E"
+              strokeWidth="2"
+              strokeDasharray="10 9"
+              strokeLinecap="round"
+            />
+          </svg>
         </div>
       </HTMLContainer>
     );
@@ -273,13 +278,16 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
     joinFlash: T.boolean,
     playerId: T.string,
     labelScale: T.number,
+    vx: T.number,
+    vy: T.number,
+    tint: T.number,
   };
   getDefaultProps() {
     return {
       w: 140,
       h: 120,
       name: "Player",
-      avatar: "bolt",
+      avatar: "otter",
       isIt: false,
       ghost: false,
       frozen: false,
@@ -300,18 +308,19 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
       joinFlash: false,
       playerId: "",
       labelScale: 1,
+      vx: 0,
+      vy: 0,
+      tint: 0,
     };
   }
   getGeometry(shape: PlayerShape) {
     return new Rectangle2d({ width: 72, height: 72, isFilled: true });
   }
   component(shape: PlayerShape) {
-    const avatar = avatarById(shape.props.avatar);
     const held = POWER_UPS[shape.props.powerId as PowerId];
     const token = 72;
-    const stroke = shape.props.isIt ? "#e03131" : shape.props.self ? "#4ba1f1" : "#1d1d1d";
     const scale = shape.props.labelScale;
-    const labelH = 20 * scale + 2;
+    const labelH = 26 * scale + 2;
     const labelW = shape.props.labelW || 72 * scale;
     const cx = token / 2;
     const cy = token / 2;
@@ -325,7 +334,6 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
     const ang = Math.atan2(ay - cy, ax - cx);
     const rim = 36;
     const sx = cx + Math.cos(ang) * rim;
-    const sy = cy + Math.sin(ang) * rim;
     return (
       <HTMLContainer>
         <div
@@ -334,49 +342,46 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
           style={{
             width: token,
             height: token,
-            opacity: shape.props.ghost ? 0.42 : 1,
             position: "relative",
             overflow: "visible",
           }}
         >
           <div
-            className={
-              shape.props.squash ? "blob-squash" : shape.props.frozen ? "ice-shimmer" : "blob-idle"
-            }
+            className={shape.props.squash ? "blob-squash" : undefined}
             style={{
               width: token,
               height: token,
               position: "absolute",
               left: 0,
               top: 0,
+              overflow: "visible",
             }}
           >
-            {shape.props.frozen && (
-              <svg
-                width={84}
-                height={84}
-                viewBox="0 0 84 84"
-                style={{ position: "absolute", left: -6, top: -6, pointerEvents: "none" }}
-              >
-                <circle cx="42" cy="42" r="36" fill="rgba(68,101,233,0.16)" stroke="#4465e9" strokeWidth={STROKE} />
-              </svg>
-            )}
             {shape.props.self && (
-              <svg
-                width={84}
-                height={84}
-                viewBox="0 0 84 84"
-                style={{ position: "absolute", left: -6, top: -6, pointerEvents: "none" }}
-              >
-                <circle cx="42" cy="42" r="38" fill="none" stroke="#4ba1f1" strokeWidth={2.5} />
-              </svg>
+              <span
+                style={{
+                  position: "absolute",
+                  inset: -8,
+                  borderRadius: "50%",
+                  border: "2.5px solid #4465E9",
+                  pointerEvents: "none",
+                }}
+              />
             )}
-            <svg width={token} height={token} viewBox="0 0 72 72">
-              <path d={blobPath(72, shape.props.name.length)} fill={avatar.color} stroke={stroke} strokeWidth={STROKE} />
-            </svg>
-            <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-              <AvatarGlyph glyph={avatar.glyph} accent={avatar.accent} size={28} />
-            </div>
+            {shape.props.hasShield && !shape.props.frozen && !shape.props.ghost && (
+              <span className="shield-ring" />
+            )}
+            <Critter
+              avatar={shape.props.avatar}
+              isIt={shape.props.isIt}
+              ghost={shape.props.ghost}
+              frozen={shape.props.frozen}
+              hasShield={shape.props.hasShield && !shape.props.isIt}
+              stunned={shape.props.squash}
+              vx={shape.props.vx}
+              vy={shape.props.vy}
+              tint={shape.props.tint}
+            />
             {held && (
               <div
                 style={{
@@ -385,10 +390,12 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
                   bottom: -4,
                   width: 22,
                   height: 22,
+                  borderRadius: 7,
                   background: held.color,
-                  border: `${STROKE}px solid #1d1d1d`,
+                  border: `${STROKE}px solid #1D1D1F`,
                   display: "grid",
                   placeItems: "center",
+                  zIndex: 2,
                 }}
               >
                 <PowerGlyph icon={held.icon} color={held.ink} size={12} />
@@ -410,19 +417,21 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
             >
               <line
                 x1={sx - cx + 100}
-                y1={sy - cy + 100}
+                y1={cy + Math.sin(ang) * rim - cy + 100}
                 x2={ax - cx + 100}
                 y2={ay - cy + 100}
-                stroke="#1d1d1d"
+                stroke="#1D1D1F"
                 strokeWidth={STROKE}
                 strokeLinecap="round"
-                opacity={0.55}
+                opacity={0.45}
               />
             </svg>
           )}
           {shape.props.showLabel && (
             <div
-              className={`player-label${shape.props.joinFlash ? " join-flash" : ""}${shape.props.self ? " you-label" : ""}`}
+              className={`player-label${shape.props.joinFlash ? " join-flash" : ""}${
+                shape.props.self ? " you-label" : ""
+              }${shape.props.isIt ? " it-label" : ""}`}
               data-inkt="label"
               style={{
                 position: "absolute",
@@ -432,15 +441,13 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
                 height: labelH,
                 lineHeight: `${labelH - 2}px`,
                 transform: "translate(-50%, -50%)",
-                fontWeight: 600,
-                color: shape.props.isIt ? "#e03131" : shape.props.self ? "#1a5f9e" : "#1d1d1d",
                 textAlign: "center",
               }}
             >
               {shape.props.self
-                ? `you · ${shape.props.name}`
+                ? `${shape.props.name} you`
                 : shape.props.isIt
-                  ? `it · ${shape.props.name}`
+                  ? `IT ${shape.props.name}`
                   : shape.props.name}
             </div>
           )}
@@ -475,14 +482,18 @@ export class PowerShapeUtil extends ShapeUtil<PowerShape> {
         <div className="gem-bob" style={{ width: shape.props.w, height: shape.props.h, display: "flex", flexDirection: "column", alignItems: "center" }}>
           <div
             style={{
-              width: 52,
-              height: 52,
-              background: def?.color ?? "#f1ac4b",
-              color: def?.ink ?? "#1d1d1d",
+              width: 44,
+              height: 44,
+              background: "#fff",
+              color: def?.ink ?? "#1D1D1F",
               display: "grid",
               placeItems: "center",
-              border: `${STROKE}px solid #1d1d1d`,
-              borderRadius: 8,
+              border: `${STROKE}px solid #1D1D1F`,
+              borderRadius: 12,
+              boxShadow: "0 2px 0 rgba(29,29,31,.08)",
+              position: "relative",
+              outline: `1.5px dashed ${def?.color ?? "#F4B63F"}`,
+              outlineOffset: 6,
             }}
           >
             {def ? <PowerGlyph icon={def.icon} color={def.ink} size={24} /> : null}
@@ -556,8 +567,8 @@ export class WallShapeUtil extends ShapeUtil<WallShape> {
     const { w, h } = shape.props;
     return (
       <HTMLContainer>
-        <svg width={w} height={h} data-inkt="wall">
-          <path d={wobbleRectPath(w, h, 3, 1.4)} fill="#e16919" stroke="#1d1d1d" strokeWidth={STROKE} />
+        <svg width={w} height={h} data-inkt="wall" style={{ filter: "drop-shadow(0 2px 0 rgba(29,29,31,.12))" }}>
+          <rect x="0.75" y="0.75" width={Math.max(0, w - 1.5)} height={Math.max(0, h - 1.5)} rx="4" fill="#E9875B" stroke="#B85A30" strokeWidth={STROKE} />
         </svg>
       </HTMLContainer>
     );
@@ -579,19 +590,16 @@ export class DecoyShapeUtil extends ShapeUtil<DecoyShape> {
     avatar: T.string,
   };
   getDefaultProps() {
-    return { w: 80, h: 80, name: "Decoy", avatar: "bolt" };
+    return { w: 72, h: 72, name: "Decoy", avatar: "otter" };
   }
   getGeometry(shape: DecoyShape) {
     return new Circle2d({ radius: 36, isFilled: true });
   }
   component(shape: DecoyShape) {
-    const avatar = avatarById(shape.props.avatar);
     return (
       <HTMLContainer>
-        <div style={{ width: shape.props.w, opacity: 0.5, display: "grid", placeItems: "center" }}>
-          <svg width={56} height={56} viewBox="0 0 72 72">
-            <path d={blobPath(72, 4)} fill={avatar.color} stroke="#4465e9" strokeWidth={STROKE} strokeDasharray="5 5" />
-          </svg>
+        <div style={{ width: 72, height: 72, position: "relative", overflow: "visible" }}>
+          <Critter avatar={shape.props.avatar} ghost />
         </div>
       </HTMLContainer>
     );

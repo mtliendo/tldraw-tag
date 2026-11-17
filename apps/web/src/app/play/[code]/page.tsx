@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { POWER_UPS, type PowerId } from "@inkt/shared";
+import { POWER_UPS, assignedCritterLine, avatarTintIndex, type PowerId } from "@inkt/shared";
+import { CritterThumb } from "@/components/Critter";
 import { useGameRoom } from "@/hooks/useGameRoom";
 import { useKeyboard } from "@/hooks/useKeyboard";
 import { GameCanvas } from "@/components/GameCanvas";
@@ -17,7 +18,7 @@ export default function PlayPage() {
   const params = useParams<{ code: string }>();
   const router = useRouter();
   const code = String(params.code || "").toUpperCase();
-  const [identity, setIdentity] = useState<{ name: string; avatar: string } | null>(null);
+  const [identity, setIdentity] = useState<{ name: string } | null>(null);
   const [mobile, setMobile] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -44,7 +45,6 @@ export default function PlayPage() {
     role: "player",
     code,
     name: identity?.name,
-    avatar: identity?.avatar,
     enabled: Boolean(identity),
   });
 
@@ -106,13 +106,35 @@ export default function PlayPage() {
         {error && (
           <div style={{ position: "absolute", top: 80, left: 16, zIndex: 8, color: "var(--it)" }}>{error}</div>
         )}
-        <GameCanvas view={view} selfId={me?.id} followZone={!mobile} followPlayer={mobile} />
+        <GameCanvas
+          view={view}
+          selfId={me?.id}
+          followZone={!mobile}
+          followPlayer={mobile}
+          labelScale={mobile ? 1.45 : 1}
+        />
         {view.phase === "lobby" && (
-          <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "end center", padding: 24, zIndex: 6 }}>
-            <div className="panel" style={{ padding: 16, textAlign: "center" }}>
+          <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: 24, zIndex: 6 }}>
+            <div className="panel" style={{ padding: 22, textAlign: "center", minWidth: 240 }}>
               <div className="kicker">Lobby {code}</div>
-              <h2>Waiting for the admin to start</h2>
-              <p className="muted">{view.players.length} in the room{connected ? "" : " · connecting"}</p>
+              {me && (
+                <>
+                  <div style={{ display: "flex", justifyContent: "center", margin: "12px 0 6px" }}>
+                    <CritterThumb
+                      avatar={me.avatar}
+                      size={96}
+                      tint={avatarTintIndex(view.players, me.id, me.avatar)}
+                    />
+                  </div>
+                  <h2 style={{ fontSize: 28 }}>{assignedCritterLine(me.avatar)}</h2>
+                </>
+              )}
+              <p className="muted" style={{ margin: "8px 0 0" }}>
+                Waiting for the admin to start
+              </p>
+              <p className="muted">
+                {view.players.length} in the room{connected ? "" : " · connecting"}
+              </p>
             </div>
           </div>
         )}
@@ -126,7 +148,7 @@ export default function PlayPage() {
               justifyContent: "center",
               padding: mobile ? 10 : 24,
               zIndex: 9,
-              background: "rgba(247,249,251,0.45)",
+              background: "color-mix(in srgb, var(--page) 78%, transparent)",
               overflow: "hidden",
               minHeight: 0,
             }}
@@ -142,11 +164,17 @@ export default function PlayPage() {
             justifyContent: "space-between",
             alignItems: "center",
             padding: "6px 14px 10px",
-            background: "var(--card)",
-            borderTop: "1.5px solid var(--ink)",
+            background: "#fff",
+            borderTop: "1.5px solid var(--line)",
+            minHeight: 176,
           }}
         >
-          <Joystick onChange={sendInput} compact />
+          <Joystick
+            onChange={sendInput}
+            compact
+            avatar={me?.avatar}
+            tint={me ? avatarTintIndex(view.players, me.id, me.avatar) : 0}
+          />
           <PowerButton powerId={me?.powerId ?? ""} charges={me?.charges ?? 0} onUse={usePower} compact />
         </section>
       )}

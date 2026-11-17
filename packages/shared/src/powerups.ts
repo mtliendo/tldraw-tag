@@ -7,12 +7,15 @@ export type PowerId =
   | "swapper"
   | "shield";
 
+export type PowerIcon = "bolt" | "brick" | "ghost" | "clone" | "snow" | "swap" | "shield";
+
 export type PowerDef = {
   id: PowerId;
   label: string;
   verb: string;
   color: string;
   ink: string;
+  icon: PowerIcon;
   charges: number;
   spawnWeight: number;
   description: string;
@@ -23,9 +26,10 @@ export const POWER_UPS: Record<PowerId, PowerDef> = {
   speedster: {
     id: "speedster",
     label: "Speedster",
-    verb: "BOOST",
-    color: "#FFD166",
-    ink: "#3A2A00",
+    verb: "boost",
+    color: "#FED49A",
+    ink: "#1d1d1d",
+    icon: "bolt",
     charges: 3,
     spawnWeight: 1.2,
     description: "Three 2-second speed bursts.",
@@ -33,9 +37,10 @@ export const POWER_UPS: Record<PowerId, PowerDef> = {
   paver: {
     id: "paver",
     label: "Paver",
-    verb: "WALL",
-    color: "#FF9F1C",
-    ink: "#3A2200",
+    verb: "wall",
+    color: "#FAA475",
+    ink: "#1d1d1d",
+    icon: "brick",
     charges: 4,
     spawnWeight: 1,
     description: "Drop 4 blocking walls that last 5s.",
@@ -43,9 +48,10 @@ export const POWER_UPS: Record<PowerId, PowerDef> = {
   ghost: {
     id: "ghost",
     label: "Ghost",
-    verb: "PHASE",
-    color: "#E8ECFF",
-    ink: "#1B1F3A",
+    verb: "phase",
+    color: "#C0CAD3",
+    ink: "#1d1d1d",
+    icon: "ghost",
     charges: 2,
     spawnWeight: 1,
     description: "Pass through walls and players for 2s, twice.",
@@ -53,9 +59,10 @@ export const POWER_UPS: Record<PowerId, PowerDef> = {
   decoy: {
     id: "decoy",
     label: "Decoy",
-    verb: "CLONE",
-    color: "#7AE7FF",
-    ink: "#042A36",
+    verb: "clone",
+    color: "#9BC4FD",
+    ink: "#1d1d1d",
+    icon: "clone",
     charges: 1,
     spawnWeight: 0.9,
     description: "Spawn a fake copy that drifts for 4s.",
@@ -63,9 +70,10 @@ export const POWER_UPS: Record<PowerId, PowerDef> = {
   freezer: {
     id: "freezer",
     label: "Freezer",
-    verb: "FREEZE",
-    color: "#6B8CFF",
-    ink: "#071230",
+    verb: "freeze",
+    color: "#8AA3FF",
+    ink: "#1d1d1d",
+    icon: "snow",
     charges: 1,
     spawnWeight: 0.9,
     description: "Freeze the nearest player in range for 1.5s.",
@@ -73,9 +81,10 @@ export const POWER_UPS: Record<PowerId, PowerDef> = {
   swapper: {
     id: "swapper",
     label: "Swapper",
-    verb: "SWAP",
-    color: "#C084FC",
-    ink: "#2A0848",
+    verb: "swap",
+    color: "#DB91FD",
+    ink: "#1d1d1d",
+    icon: "swap",
     charges: 1,
     spawnWeight: 0.8,
     description: "Swap positions with a random player.",
@@ -83,9 +92,10 @@ export const POWER_UPS: Record<PowerId, PowerDef> = {
   shield: {
     id: "shield",
     label: "Shield",
-    verb: "GUARD",
-    color: "#3DFFC8",
-    ink: "#043328",
+    verb: "guard",
+    color: "#98D08A",
+    ink: "#1d1d1d",
+    icon: "shield",
     charges: 1,
     spawnWeight: 1,
     description: "Block the next tag.",

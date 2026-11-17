@@ -17,29 +17,21 @@ export default function JoinPage() {
 
   return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
-      <div className="panel" style={{ width: "min(520px, 100%)", padding: 28 }}>
+      <div className="panel" style={{ width: "min(520px, 100%)", padding: 28, transform: "rotate(-0.6deg)" }}>
         <div className="kicker">Room {code}</div>
-        <h1 style={{ fontSize: 48, margin: "4px 0 8px" }}>Get in.</h1>
-        <p className="muted">No login. Pick a face, drop a name, survive the zone.</p>
+        <h1 style={{ fontSize: "clamp(36px, 10vw, 48px)", margin: "4px 0 8px" }}>Get in.</h1>
+        <p className="muted">No login. Pick a doodle, drop a name, survive the zone.</p>
         <label className="kicker">Display name</label>
         <input
           autoFocus
+          className="sketch-input"
           value={name}
           maxLength={16}
           onChange={(e) => setName(e.target.value)}
           placeholder="Your name"
-          style={{
-            width: "100%",
-            margin: "8px 0 18px",
-            padding: "14px 12px",
-            borderRadius: 12,
-            border: "1px solid var(--line)",
-            background: "#0b0d16",
-            color: "white",
-            fontSize: 20,
-          }}
+          style={{ margin: "8px 0 18px" }}
         />
-        <div className="kicker">Avatar — cosmetic only</div>
+        <div className="kicker">Avatar — doodle only</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, margin: "10px 0 20px" }}>
           {AVATARS.map((a) => (
             <button
@@ -48,11 +40,13 @@ export default function JoinPage() {
               onClick={() => setAvatar(a.id)}
               style={{
                 aspectRatio: "1",
-                borderRadius: 16,
-                border: avatar === a.id ? "3px solid white" : "1px solid var(--line)",
+                borderRadius: "46% 54% 48% 52%",
+                border: avatar === a.id ? "3px solid var(--ink)" : "2px solid var(--ink)",
                 background: a.color,
                 display: "grid",
                 placeItems: "center",
+                boxShadow: avatar === a.id ? "3px 3px 0 var(--ink)" : "none",
+                transform: avatar === a.id ? "rotate(-4deg) scale(1.04)" : "rotate(2deg)",
               }}
               aria-label={a.label}
             >

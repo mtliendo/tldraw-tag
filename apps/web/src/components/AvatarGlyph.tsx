@@ -2,9 +2,17 @@
 
 import type { AvatarDef } from "@inkt/shared";
 
-export function AvatarGlyph({ glyph, accent }: { glyph: AvatarDef["glyph"]; accent: string }) {
+export function AvatarGlyph({
+  glyph,
+  accent,
+  size = 22,
+}: {
+  glyph: AvatarDef["glyph"];
+  accent: string;
+  size?: number;
+}) {
   const stroke = accent;
-  const common = { width: 22, height: 22, viewBox: "0 0 24 24", fill: stroke };
+  const common = { width: size, height: size, viewBox: "0 0 24 24", fill: stroke };
   switch (glyph) {
     case "bolt":
       return (

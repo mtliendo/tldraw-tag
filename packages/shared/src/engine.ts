@@ -14,6 +14,7 @@ import {
   PICKUP_DISTANCE,
   PLAYER_RADIUS,
   PLAYER_SPEED,
+  POWER_MAX_ON_BOARD,
   POWER_PULSE_WARN,
   POWER_SPAWN_MAX,
   POWER_SPAWN_MIN,
@@ -106,6 +107,7 @@ export class TagEngine {
       nextShrinkAt: shrinkInterval,
       shrinkEndsAt: 0,
       nextPowerAt: 2.5,
+      showcaseUntil: 0,
       zone: { ...FULL_ARENA },
       fromZone: { ...FULL_ARENA },
       targetZone: { ...FULL_ARENA },
@@ -237,7 +239,80 @@ export class TagEngine {
     this.resetRoundKeepPlayers();
     this.state.phase = "lobby";
     this.state.itId = "";
+    this.state.showcaseUntil = 0;
     for (const p of Object.values(this.state.players)) p.isIt = false;
+  }
+
+  /** Pin visible power-ups, a Paver wall, a freeze, and a held power for projector demos. */
+  showcase() {
+    const s = this.state;
+    if (s.phase !== "playing") return;
+    const z = s.zone;
+    s.powerUps = {};
+    s.pulses = {};
+    const gems: Array<{ kind: PowerId; fx: number; fy: number }> = [
+      { kind: "speedster", fx: 0.2, fy: 0.28 },
+      { kind: "ghost", fx: 0.38, fy: 0.16 },
+      { kind: "shield", fx: 0.58, fy: 0.18 },
+      { kind: "swapper", fx: 0.22, fy: 0.52 },
+      { kind: "freezer", fx: 0.36, fy: 0.44 },
+    ];
+    for (const gem of gems) {
+      const id = uid("pow");
+      s.powerUps[id] = {
+        id,
+        kind: gem.kind,
+        x: z.x + z.w * gem.fx,
+        y: z.y + z.h * gem.fy,
+      };
+    }
+    const pulseId = uid("pow");
+    s.pulses[pulseId] = {
+      id: pulseId,
+      kind: "decoy",
+      x: z.x + z.w * 0.18,
+      y: z.y + z.h * 0.72,
+      spawnAt: s.now + 0.9,
+    };
+
+    const wallId = uid("wall");
+    s.walls[wallId] = {
+      id: wallId,
+      x: z.x + z.w * 0.32,
+      y: z.y + z.h * 0.32,
+      w: WALL_WIDTH,
+      h: WALL_THICKNESS,
+      expiresAt: s.now + 18,
+    };
+
+    const players = Object.values(s.players);
+    const cols = 5;
+    players.forEach((p, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      p.x = z.x + z.w * 0.48 + col * 128;
+      p.y = z.y + z.h * 0.34 + row * 140;
+      p.vx = 0;
+      p.vy = 0;
+      this.clampPlayer(p);
+      this.inputs.set(p.id, { x: 0, y: 0, usePower: false });
+    });
+
+    const freezeTarget = players.find((p) => !p.isIt && p.isBot) ?? players.find((p) => !p.isIt);
+    if (freezeTarget) freezeTarget.frozenUntil = s.now + 14;
+
+    const humans = players.filter((p) => !p.isBot);
+    const holders = humans.length ? humans : players.filter((p) => p !== freezeTarget).slice(0, 1);
+    for (const holder of holders) {
+      holder.powerId = "paver";
+      holder.charges = 3;
+    }
+
+    s.showcaseUntil = s.now + 7;
+    s.nextPowerAt = s.now + 8;
+    s.nextShrinkAt = s.now + 1.5;
+    s.shrinkEndsAt = 0;
+    this.push({ type: "announce", text: "Power-ups in the zone" });
   }
 
   tick(dt: number) {
@@ -271,6 +346,9 @@ export class TagEngine {
       timeLeft: s.timeLeft,
       roundLength: s.roundLength,
       zone: s.zone,
+      targetZone: s.shrinkEndsAt > s.now ? s.targetZone : nextZone(s.zone),
+      shrinkIn: s.shrinkEndsAt > s.now ? 0 : Math.max(0, s.nextShrinkAt - s.now),
+      shrinking: s.shrinkEndsAt > s.now,
       itId: s.itId,
       itName: it?.name ?? "",
       enabledPowers: s.enabledPowers,
@@ -319,6 +397,7 @@ export class TagEngine {
     this.state.shrinkEndsAt = 0;
     this.state.nextShrinkAt = this.state.shrinkInterval;
     this.state.nextPowerAt = 2.5;
+    this.state.showcaseUntil = 0;
     this.state.powerUps = {};
     this.state.pulses = {};
     this.state.walls = {};
@@ -424,7 +503,7 @@ export class TagEngine {
     s.nextPowerAt = s.now + POWER_SPAWN_MIN + this.rand() * (POWER_SPAWN_MAX - POWER_SPAWN_MIN);
     const kind = pickWeightedPower(s.enabledPowers, this.rand);
     if (!kind) return;
-    if (Object.keys(s.powerUps).length + Object.keys(s.pulses).length >= 8) return;
+    if (Object.keys(s.powerUps).length + Object.keys(s.pulses).length >= POWER_MAX_ON_BOARD) return;
     const pos = this.randomInZone(36);
     const id = uid("pow");
     s.pulses[id] = { id, kind, x: pos.x, y: pos.y, spawnAt: s.now + POWER_PULSE_WARN };
@@ -513,6 +592,7 @@ export class TagEngine {
 
   private resolvePickups() {
     const s = this.state;
+    if (s.now < s.showcaseUntil) return;
     for (const p of Object.values(s.players)) {
       for (const pow of Object.values(s.powerUps)) {
         if (dist(p.x, p.y, pow.x, pow.y) > PICKUP_DISTANCE) continue;
@@ -644,6 +724,14 @@ export class TagEngine {
     let tx = bot.x;
     let ty = bot.y;
     let usePower = false;
+
+    if (s.showcaseUntil > s.now) {
+      return {
+        x: (this.rand() - 0.5) * 0.15,
+        y: (this.rand() - 0.5) * 0.15,
+        usePower: false,
+      };
+    }
 
     if (bot.isIt) {
       let nearest: EnginePlayer | null = null;

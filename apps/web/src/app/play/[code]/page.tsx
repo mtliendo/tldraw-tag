@@ -56,7 +56,7 @@ export default function PlayPage() {
         <div style={{ position: "absolute", top: 12, left: 12, right: 12, zIndex: 6 }}>
           <TopHud view={view} selfPower={me ? { id: me.powerId, charges: me.charges } : undefined} />
           {announce && (
-            <div className="chip" style={{ marginTop: 8, background: "rgba(255,45,123,0.2)" }}>
+            <div className="chip" style={{ marginTop: 8, background: "#FCE19C" }}>
               {announce}
             </div>
           )}
@@ -86,8 +86,9 @@ export default function PlayPage() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "12px 20px 24px",
-            background: "#0b0d16",
+            padding: "16px 20px 40px",
+            background: "var(--card)",
+            borderTop: "2.5px solid var(--ink)",
           }}
         >
           <Joystick onChange={sendInput} />

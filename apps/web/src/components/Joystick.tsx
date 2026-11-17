@@ -51,30 +51,45 @@ export function Joystick({
       onPointerUp={end}
       onPointerCancel={end}
       style={{
-        width: 148,
-        height: 148,
-        borderRadius: "50%",
-        background: "rgba(10,12,22,0.72)",
-        border: "2px solid rgba(255,255,255,0.16)",
+        width: 156,
+        height: 156,
+        borderRadius: "48% 52% 46% 54%",
+        background: "#FCE19C",
+        border: "3px solid var(--ink)",
         position: "relative",
         touchAction: "none",
-        boxShadow: "inset 0 0 30px rgba(0,0,0,0.5)",
+        boxShadow: "3px 3px 0 var(--ink)",
       }}
+      aria-label="Move"
     >
       <div
         ref={knob}
         style={{
           width: 64,
           height: 64,
-          borderRadius: "50%",
-          background: "#f4f7ff",
+          borderRadius: "46% 54% 50% 50%",
+          background: "#4ba1f1",
+          border: "3px solid var(--ink)",
           position: "absolute",
           left: "50%",
           top: "50%",
           margin: "-32px 0 0 -32px",
-          boxShadow: "0 8px 0 rgba(0,0,0,0.25)",
+          boxShadow: "2px 2px 0 var(--ink)",
         }}
       />
+      <div
+        className="kicker"
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: -22,
+          textAlign: "center",
+          color: "var(--ink)",
+        }}
+      >
+        move
+      </div>
     </div>
   );
 }

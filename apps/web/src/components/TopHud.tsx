@@ -20,16 +20,16 @@ export function TopHud({
         flexWrap: "wrap",
       }}
     >
-      <div className="chip" style={{ fontFamily: "var(--font-mono)", fontSize: 22 }}>
-        {view.phase === "ended" ? "FINAL" : formatTime(view.timeLeft)}
+      <div className="chip" style={{ fontSize: 22 }}>
+        {view.phase === "ended" ? "final" : formatTime(view.timeLeft)}
       </div>
-      <div className="chip" style={{ background: view.itName ? "rgba(255,45,123,0.18)" : undefined }}>
+      <div className="chip" style={{ background: view.itName ? "#f87777" : undefined }}>
         <span className="kicker" style={{ margin: 0 }}>
-          IT
+          it
         </span>
         <strong>{view.itName || "—"}</strong>
       </div>
-      <div className="chip">{view.phase.toUpperCase()}</div>
+      <div className="chip">{view.phase}</div>
       {def && (
         <div className="chip" style={{ background: def.color, color: def.ink }}>
           {def.label} · {selfPower?.charges}

@@ -26,6 +26,9 @@ export type ViewState = {
   timeLeft: number;
   roundLength: number;
   zone: { x: number; y: number; w: number; h: number };
+  targetZone: { x: number; y: number; w: number; h: number };
+  shrinkIn: number;
+  shrinking: boolean;
   itId: string;
   itName: string;
   enabledPowers: string[];
@@ -51,6 +54,9 @@ export const EMPTY_VIEW: ViewState = {
   timeLeft: 75,
   roundLength: 75,
   zone: { x: 0, y: 0, w: 1600, h: 900 },
+  targetZone: { x: 0, y: 0, w: 1600, h: 900 },
+  shrinkIn: 10,
+  shrinking: false,
   itId: "",
   itName: "",
   enabledPowers: [],

@@ -153,6 +153,9 @@ export class TagRoom extends Room<{ state: GameState }> {
       case "spawnBots":
         this.engine.spawnBots(Math.floor(num(message.count) ?? 8));
         break;
+      case "showcase":
+        this.engine.showcase();
+        break;
       default:
         throw new Error(`Unknown admin action: ${action}`);
     }
@@ -199,6 +202,12 @@ function applyPublic(state: GameState, pub: PublicState) {
   state.zoneY = pub.zone.y;
   state.zoneW = pub.zone.w;
   state.zoneH = pub.zone.h;
+  state.targetZoneX = pub.targetZone.x;
+  state.targetZoneY = pub.targetZone.y;
+  state.targetZoneW = pub.targetZone.w;
+  state.targetZoneH = pub.targetZone.h;
+  state.shrinkIn = pub.shrinkIn;
+  state.shrinking = pub.shrinking;
   state.itId = pub.itId;
   state.itName = pub.itName;
 

@@ -2,6 +2,8 @@
 
 Live audience tag on a [tldraw](https://tldraw.dev) canvas. An admin creates a room, the crowd joins from their phones, and a projector shows the shrinking zone. The Colyseus server owns the simulation; browsers only send input and paint state.
 
+The whole UI stays in tldraw’s own visual language: Shantell Sans, the default light palette, hand-drawn strokes, doodle power-up stickers, and blob avatars on paper. Dark mode follows the OS if you want it; the default is a light sketchbook.
+
 ![INK TAG social preview](docs/social-preview.jpg)
 
 ## What it is
@@ -179,9 +181,15 @@ Do not enable `DEV_BYPASS_AUTH` on Railway.
 
 ![Join](docs/screenshots/02-join.png)
 
+![Join on a phone](docs/screenshots/02b-join-mobile.png)
+
 ![Lobby](docs/screenshots/03-lobby.png)
 
 ![In-game power-ups](docs/screenshots/04-ingame-powers.png)
+
+![Player view](docs/screenshots/04b-player.png)
+
+![Phone play — joystick + power](docs/screenshots/04c-player-mobile.png)
 
 ![Shrinking zone](docs/screenshots/05-shrinking-zone.png)
 

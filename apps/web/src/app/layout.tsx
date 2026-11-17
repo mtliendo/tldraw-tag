@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { DM_Sans, JetBrains_Mono, Syne } from "next/font/google";
+import { Shantell_Sans } from "next/font/google";
 import { Auth0Provider } from "@auth0/nextjs-auth0/client";
 import { auth0 } from "@/lib/auth0";
 import "./globals.css";
 
-const syne = Syne({ subsets: ["latin"], variable: "--font-syne", weight: ["600", "700", "800"] });
-const dm = DM_Sans({ subsets: ["latin"], variable: "--font-dm", weight: ["400", "500", "700"] });
-const jet = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jet", weight: ["500", "700"] });
+const draw = Shantell_Sans({
+  subsets: ["latin"],
+  variable: "--font-draw",
+  weight: ["400", "500", "600", "700", "800"],
+});
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || "http://localhost:3000";
 
@@ -30,8 +32,8 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = auth0 ? await auth0.getSession() : null;
   return (
-    <html lang="en">
-      <body className={`${syne.variable} ${dm.variable} ${jet.variable}`}>
+    <html lang="en" className={draw.variable}>
+      <body className={draw.className}>
         <Auth0Provider user={session?.user}>{children}</Auth0Provider>
       </body>
     </html>

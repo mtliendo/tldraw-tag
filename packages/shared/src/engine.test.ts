@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { TagEngine } from "./engine";
-import { ARENA_H, ARENA_W, PLAYER_RADIUS, ZONE_MIN_H, ZONE_MIN_W } from "./constants";
+import { ARENA_H, ARENA_W, ZONE_INSET, ZONE_MIN_H, ZONE_MIN_W } from "./constants";
 import { rng } from "./ids";
 
 describe("TagEngine loop", () => {
@@ -33,10 +33,10 @@ describe("TagEngine loop", () => {
     const it = engine.state.leaderboard.find((row) => row.isIt);
     assert.ok(it);
     for (const p of Object.values(engine.state.players)) {
-      assert.ok(p.x >= engine.state.zone.x + PLAYER_RADIUS);
-      assert.ok(p.x <= engine.state.zone.x + engine.state.zone.w - PLAYER_RADIUS);
-      assert.ok(p.y >= engine.state.zone.y + PLAYER_RADIUS);
-      assert.ok(p.y <= engine.state.zone.y + engine.state.zone.h - PLAYER_RADIUS);
+      assert.ok(p.x >= engine.state.zone.x + ZONE_INSET - 0.5);
+      assert.ok(p.x <= engine.state.zone.x + engine.state.zone.w - ZONE_INSET + 0.5);
+      assert.ok(p.y >= engine.state.zone.y + ZONE_INSET - 0.5);
+      assert.ok(p.y <= engine.state.zone.y + engine.state.zone.h - ZONE_INSET + 0.5);
     }
   });
 
@@ -74,5 +74,20 @@ describe("TagEngine loop", () => {
     engine.tick(0.05);
     assert.equal(engine.state.itId, b.id);
     assert.equal(b.isIt, true);
+  });
+
+  it("showcase pins gems, a wall, a freeze, and a held power", () => {
+    const engine = new TagEngine({ roundLength: 30, rand: rng(11) });
+    engine.addPlayer({ name: "Ada", avatar: "bolt" });
+    engine.spawnBots(8);
+    engine.start();
+    engine.showcase();
+    const pub = engine.toPublic();
+    assert.ok(pub.powerUps.length >= 4);
+    assert.ok(pub.walls.length >= 1);
+    assert.ok(pub.pulses.length >= 1);
+    assert.ok(pub.players.some((p) => p.frozen));
+    assert.ok(pub.players.some((p) => p.powerId === "paver"));
+    assert.ok(pub.shrinkIn > 0 && pub.shrinkIn <= 2);
   });
 });

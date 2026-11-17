@@ -108,6 +108,7 @@ export type EngineState = {
   nextShrinkAt: number;
   shrinkEndsAt: number;
   nextPowerAt: number;
+  showcaseUntil: number;
   zone: Rect;
   fromZone: Rect;
   targetZone: Rect;
@@ -149,6 +150,9 @@ export type PublicState = {
   timeLeft: number;
   roundLength: number;
   zone: Rect;
+  targetZone: Rect;
+  shrinkIn: number;
+  shrinking: boolean;
   itId: string;
   itName: string;
   enabledPowers: PowerId[];

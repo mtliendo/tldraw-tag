@@ -19,10 +19,11 @@ export function Leaderboard({
         padding: 24,
         minWidth: 280,
         maxWidth: 420,
-        background: overlay ? "rgba(7,8,15,0.92)" : undefined,
+        background: overlay ? "#fff" : undefined,
+        transform: "rotate(-1deg)",
       }}
     >
-      <div className="kicker">End of round</div>
+      <div className="kicker">end of round</div>
       <h2 style={{ fontSize: 36, margin: "4px 0 12px" }}>
         {view.itName ? `${view.itName} was IT` : "Round over"}
       </h2>
@@ -37,24 +38,25 @@ export function Leaderboard({
                 alignItems: "center",
                 gap: 12,
                 padding: "8px 0",
-                borderTop: "1px solid rgba(255,255,255,0.08)",
+                borderTop: "2px solid var(--ink)",
                 color: row.isIt ? "var(--it)" : "inherit",
               }}
             >
-              <span style={{ width: 28, fontFamily: "var(--font-mono)", opacity: 0.7 }}>{i + 1}</span>
+              <span style={{ width: 28, opacity: 0.7 }}>{i + 1}</span>
               <span
                 style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: 99,
+                  width: 18,
+                  height: 18,
+                  borderRadius: "46% 54% 50% 50%",
                   background: avatar.color,
+                  border: "2px solid var(--ink)",
                 }}
               />
               <strong style={{ flex: 1 }}>
                 {row.name}
                 {row.isIt ? "  ·  IT" : ""}
               </strong>
-              <span style={{ fontFamily: "var(--font-mono)" }}>{formatTime(row.score)}</span>
+              <span>{formatTime(row.score)}</span>
             </li>
           );
         })}

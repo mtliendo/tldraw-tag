@@ -90,7 +90,8 @@ export function AdminDesk({
               max={24}
               value={bots}
               onChange={(e) => setBots(Number(e.target.value))}
-              style={{ width: "100%", marginBottom: 16, padding: 8, borderRadius: 8, background: "#10121c", color: "white", border: "1px solid var(--line)" }}
+              className="sketch-input"
+              style={{ width: "100%", marginBottom: 16, padding: 8 }}
             />
 
             <div className="kicker">Power-ups</div>
@@ -102,7 +103,18 @@ export function AdminDesk({
                     checked={enabled[id]}
                     onChange={(e) => setEnabled((s) => ({ ...s, [id]: e.target.checked }))}
                   />
-                  <span style={{ color: POWER_UPS[id].color, fontWeight: 700 }}>{POWER_UPS[id].label}</span>
+                  <span
+                    style={{
+                      background: POWER_UPS[id].color,
+                      color: POWER_UPS[id].ink,
+                      fontWeight: 700,
+                      padding: "1px 8px",
+                      border: "2px solid var(--ink)",
+                      transform: "rotate(-2deg)",
+                    }}
+                  >
+                    {POWER_UPS[id].label}
+                  </span>
                   <span className="muted" style={{ fontSize: 12 }}>
                     {POWER_UPS[id].description}
                   </span>
@@ -135,9 +147,16 @@ export function AdminDesk({
                 Reset
               </button>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="btn btn-ghost" onClick={() => admin("spawnBots", { count: 10 })}>
                 +10 bots
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => admin("showcase")}
+                disabled={view.phase !== "playing"}
+              >
+                Showcase
               </button>
               {code && (
                 <a className="btn btn-ghost" href={screenUrl(code)} target="_blank" rel="noreferrer">

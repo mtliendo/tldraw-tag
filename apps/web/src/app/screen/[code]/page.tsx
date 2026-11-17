@@ -1,13 +1,13 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { POWER_UPS, avatarById, formatTime, type PowerId } from "@inkt/shared";
 import { useGameRoom } from "@/hooks/useGameRoom";
 import { GameCanvas } from "@/components/GameCanvas";
 import { QrPanel } from "@/components/QrPanel";
-import { TopHud } from "@/components/TopHud";
 import { Leaderboard } from "@/components/Leaderboard";
+import { AvatarGlyph } from "@/components/AvatarGlyph";
 import { joinUrl } from "@/lib/colyseus";
-import { formatTime } from "@inkt/shared";
 
 export default function ScreenPage() {
   const params = useParams<{ code: string }>();
@@ -17,43 +17,116 @@ export default function ScreenPage() {
     code,
     enabled: Boolean(code),
   });
+  const it = view.players.find((p) => p.isIt);
+  const itAvatar = avatarById(it?.avatar);
+  const itPower = it?.powerId ? POWER_UPS[it.powerId as PowerId] : null;
 
   return (
-    <main style={{ height: "100vh", position: "relative", background: "#05060b" }}>
-      <div style={{ position: "absolute", top: 18, left: 18, right: 220, zIndex: 6, display: "flex", gap: 12, alignItems: "flex-start" }}>
-        <div>
-          <div className="display" style={{ fontSize: 28, letterSpacing: "0.2em" }}>
-            INK TAG
+    <main style={{ height: "100vh", position: "relative", background: "var(--paper)" }}>
+      <GameCanvas view={view} />
+
+      <div
+        style={{
+          position: "absolute",
+          top: 18,
+          left: 18,
+          zIndex: 6,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        <div className="display" style={{ fontSize: 22, letterSpacing: "0.08em" }}>
+          ink tag
+        </div>
+        <div
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 96,
+            lineHeight: 0.9,
+            letterSpacing: 2,
+            fontWeight: 800,
+          }}
+        >
+          {view.phase === "ended" ? "final" : formatTime(view.timeLeft)}
+        </div>
+        <div className="chip" style={{ fontSize: 18, width: "fit-content" }}>
+          {view.phase}
+          {view.shrinking ? " · zone moving" : view.shrinkIn > 0 && view.shrinkIn <= 3 ? " · zone warning" : ""}
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          top: 18,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 6,
+        }}
+      >
+        <div
+          className="panel"
+          style={{
+            padding: "14px 28px",
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            background: "#f87777",
+            transform: "rotate(-1deg)",
+          }}
+        >
+          {it && (
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: "48% 52% 46% 54%",
+                background: itAvatar.color,
+                display: "grid",
+                placeItems: "center",
+                border: "3px solid var(--ink)",
+              }}
+            >
+              <AvatarGlyph glyph={itAvatar.glyph} accent={itAvatar.accent} size={32} />
+            </div>
+          )}
+          <div>
+            <div className="kicker" style={{ color: "var(--ink)", fontSize: 14 }}>
+              currently it
+            </div>
+            <div className="display" style={{ fontSize: 42, lineHeight: 1 }}>
+              {view.itName || "Waiting"}
+            </div>
+            {itPower && (
+              <div className="muted" style={{ fontWeight: 700 }}>
+                holding {itPower.label}
+              </div>
+            )}
           </div>
-          <TopHud view={view} />
         </div>
         {announce && (
-          <div className="chip" style={{ fontSize: 22, background: "rgba(255,45,123,0.22)" }}>
+          <div className="chip" style={{ marginTop: 10, fontSize: 22, background: "#FCE19C" }}>
             {announce}
           </div>
         )}
       </div>
-      <GameCanvas view={view} />
+
       <div style={{ position: "absolute", right: 16, bottom: 16, zIndex: 6 }}>
-        <QrPanel value={joinUrl(code)} code={view.code || code} compact />
+        <QrPanel value={joinUrl(code)} code={view.code || code} projector />
       </div>
-      {view.phase === "playing" && (
+
+      {view.phase === "ended" && (
         <div
           style={{
             position: "absolute",
-            left: 18,
-            bottom: 18,
-            zIndex: 6,
-            fontFamily: "var(--font-mono)",
-            fontSize: 64,
-            letterSpacing: 4,
+            inset: 0,
+            display: "grid",
+            placeItems: "center",
+            zIndex: 8,
+            background: "rgba(247,249,251,0.35)",
           }}
         >
-          {formatTime(view.timeLeft)}
-        </div>
-      )}
-      {view.phase === "ended" && (
-        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", zIndex: 8, background: "rgba(5,6,11,0.35)" }}>
           <Leaderboard view={view} overlay />
         </div>
       )}

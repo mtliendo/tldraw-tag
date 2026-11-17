@@ -71,6 +71,12 @@ export class GameState extends Schema {
   @type("number") zoneY = 0;
   @type("number") zoneW = 1600;
   @type("number") zoneH = 900;
+  @type("number") targetZoneX = 0;
+  @type("number") targetZoneY = 0;
+  @type("number") targetZoneW = 1600;
+  @type("number") targetZoneH = 900;
+  @type("number") shrinkIn = 10;
+  @type("boolean") shrinking = false;
   @type("string") itId = "";
   @type("string") itName = "";
   @type("string") lastAnnounce = "";

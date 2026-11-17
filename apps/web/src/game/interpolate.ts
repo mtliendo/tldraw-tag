@@ -49,9 +49,17 @@ function mix(a: ViewState, b: ViewState, t: number): ViewState {
     w: lerp(a.zone.w, b.zone.w, t),
     h: lerp(a.zone.h, b.zone.h, t),
   };
+  const targetZone = {
+    x: lerp(a.targetZone.x, b.targetZone.x, t),
+    y: lerp(a.targetZone.y, b.targetZone.y, t),
+    w: lerp(a.targetZone.w, b.targetZone.w, t),
+    h: lerp(a.targetZone.h, b.targetZone.h, t),
+  };
   return {
     ...b,
     zone,
+    targetZone,
+    shrinkIn: lerp(a.shrinkIn, b.shrinkIn, t),
     players: players.map((p) => ({ ...p, ...clampToZone(p.x, p.y, zone) })),
     decoys: decoys.map((d) => ({ ...d, ...clampToZone(d.x, d.y, zone) })),
   };

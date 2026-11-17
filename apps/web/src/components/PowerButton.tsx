@@ -1,6 +1,7 @@
 "use client";
 
 import { POWER_UPS, type PowerId } from "@inkt/shared";
+import { PowerGlyph } from "@/components/PowerGlyph";
 
 export function PowerButton({
   powerId,
@@ -24,27 +25,28 @@ export function PowerButton({
       style={{
         width: 132,
         height: 132,
-        borderRadius: "50%",
-        border: 0,
-        background: ready ? def.color : "#1a1d2b",
-        color: ready ? def.ink : "#6b7388",
-        fontWeight: 900,
-        letterSpacing: 0.6,
-        fontSize: 16,
-        boxShadow: ready ? `0 0 28px ${def.color}` : "none",
+        borderRadius: 8,
+        border: "3px solid var(--ink)",
+        background: ready ? def.color : "#C0CAD3",
+        color: "var(--ink)",
+        fontWeight: 800,
+        letterSpacing: 0.4,
+        fontSize: 18,
+        boxShadow: "3px 3px 0 var(--ink)",
         touchAction: "manipulation",
+        transform: "rotate(3deg)",
       }}
     >
       {ready ? (
-        <span>
+        <span style={{ display: "grid", placeItems: "center", gap: 4 }}>
+          <PowerGlyph icon={def.icon} color={def.ink} size={36} />
           {def.verb}
-          <br />
           <small>
             {charges} left
           </small>
         </span>
       ) : (
-        "POWER"
+        "power"
       )}
     </button>
   );

@@ -15,7 +15,7 @@ import {
   clampToZoneArt,
   playerTint,
 } from "@inkt/shared";
-import { ZOOM_IN_MAX, clampZoom, zoomLimits } from "@/game/playGestures";
+import { ZOOM_IN_MAX, clampZoom, followBounds, followCamera, zoomFloor, zoomLimits } from "@/game/playGestures";
 import { INKT_SHAPES } from "@/shapes/inkt-shapes";
 import { liveLabelScale, layoutPlayers } from "@/game/layoutPlayers";
 import type { ViewState } from "@/game/types";
@@ -105,28 +105,22 @@ export function GameCanvas({
       const coverZone = Math.max(vp.w / Math.max(1, zone.w), vp.h / Math.max(1, zone.h));
       const fallback = Math.max(limits.base, coverZone);
       const zoom = clampZoom(cameraZoomRef.current ?? fallback, {
-        ...limits,
+        minZoom: zoomFloor(vp.w, vp.h, zone, limits),
         maxZoom: Math.max(limits.maxZoom, fallback * ZOOM_IN_MAX),
+        base: fallback,
       });
-      const viewW = vp.w / zoom;
-      const viewH = vp.h / zoom;
-      const pad = followPadRef.current ?? { left: 0, right: 0, top: 0, bottom: 0 };
-      const innerW = Math.max(1, vp.w - pad.left - pad.right);
-      const innerH = Math.max(1, vp.h - pad.top - pad.bottom);
-      const focusX = pad.left + innerW / 2;
-      const focusY = pad.top + innerH / 2;
-      const originX = self?.x ?? zone.x + zone.w / 2;
-      const originY = self?.y ?? zone.y + zone.h / 2;
-      let left = originX - focusX / zoom;
-      let top = originY - focusY / zoom;
-      left = Math.min(Math.max(left, zone.x), zone.x + Math.max(0, zone.w - viewW));
-      top = Math.min(Math.max(top, zone.y), zone.y + Math.max(0, zone.h - viewH));
-      if (viewW >= zone.w) left = zone.x + (zone.w - viewW) / 2;
-      if (viewH >= zone.h) top = zone.y + (zone.h - viewH) / 2;
+      const cam = followCamera({
+        viewportW: vp.w,
+        viewportH: vp.h,
+        zoom,
+        player: self ? { x: self.x, y: self.y } : null,
+        bounds: followBounds(zone, vp.w, vp.h, zoom),
+        pad: followPadRef.current,
+      });
       // zoomToBounds() never zooms *in* past a fit, so Play-again (full arena)
       // would stay zoomed-out. Set the follow zoom explicitly.
       editor.stopCameraAnimation();
-      editor.setCamera({ x: -left, y: -top, z: zoom }, { immediate: true, force: true });
+      editor.setCamera({ x: -cam.left, y: -cam.top, z: cam.zoom }, { immediate: true, force: true });
     } else {
       editor.zoomToBounds(
         { x: zone.x, y: zone.y, w: zone.w, h: zone.h },

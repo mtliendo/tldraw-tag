@@ -195,7 +195,7 @@ input[type="radio"] {
 .play-move-hint {
   position: absolute;
   left: 50%;
-  bottom: 28%;
+  bottom: max(118px, calc(env(safe-area-inset-bottom, 0px) + 108px));
   transform: translateX(-50%);
   padding: 8px 14px;
   border-radius: 999px;
@@ -209,6 +209,20 @@ input[type="radio"] {
   white-space: nowrap;
   pointer-events: none;
   box-shadow: 0 1px 0 rgba(29, 29, 31, 0.06);
+  opacity: 1;
+  transition: opacity 280ms ease;
+  z-index: 5;
+}
+
+.play-move-hint.is-landscape {
+  left: auto;
+  right: max(118px, calc(env(safe-area-inset-right, 0px) + 108px));
+  bottom: max(14px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+  transform: none;
+}
+
+.play-move-hint.is-out {
+  opacity: 0;
 }
 
 .play-page {

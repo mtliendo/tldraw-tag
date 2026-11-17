@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Joystick } from "@/components/Joystick";
-import { idleGesture, reduceGesture, type GestureEvent, type GestureState, type ZoomLimits } from "@/game/playGestures";
+import {
+  HINT_MS,
+  idleGesture,
+  moveHintVisible,
+  reduceGesture,
+  type GestureEvent,
+  type GestureState,
+  type ZoomLimits,
+} from "@/game/playGestures";
 
 export function PlayGestures({
   enabled,
@@ -12,6 +20,7 @@ export function PlayGestures({
   avatar,
   tint = 0,
   hint = false,
+  landscape = false,
 }: {
   enabled: boolean;
   limits: ZoomLimits;
@@ -20,6 +29,7 @@ export function PlayGestures({
   avatar?: string;
   tint?: number;
   hint?: boolean;
+  landscape?: boolean;
 }) {
   const layer = useRef<HTMLDivElement>(null);
   const limitsRef = useRef(limits);
@@ -31,6 +41,7 @@ export function PlayGestures({
   const [state, setState] = useState<GestureState>(() => idleGesture(limits.base));
   const stateRef = useRef(state);
   stateRef.current = state;
+  const [hintExpired, setHintExpired] = useState(false);
 
   const local = useCallback((clientX: number, clientY: number) => {
     const el = layer.current;
@@ -50,6 +61,12 @@ export function PlayGestures({
     if (event.type === "reset") zoomOut.current(null);
     else if (next.zoom !== prev.zoom) zoomOut.current(next.zoom);
   }, []);
+
+  useEffect(() => {
+    if (hintExpired) return;
+    const t = window.setTimeout(() => setHintExpired(true), HINT_MS);
+    return () => window.clearTimeout(t);
+  }, [hintExpired]);
 
   useEffect(() => {
     if (!state.fading) return;
@@ -79,7 +96,10 @@ export function PlayGestures({
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
-    const reset = () => dispatch({ type: "reset" });
+    const reset = () => {
+      setHintExpired(false);
+      dispatch({ type: "reset" });
+    };
     window.addEventListener("inkt-reset-gestures", reset);
     return () => {
       node.removeEventListener("pointerdown", down);
@@ -92,6 +112,7 @@ export function PlayGestures({
 
   const stick = state.stick ?? state.fading;
   const fading = Boolean(!state.stick && state.fading);
+  const hintOn = Boolean(hint) && moveHintVisible(state.moved, hintExpired ? HINT_MS : 0);
 
   if (!enabled) return null;
 
@@ -106,8 +127,11 @@ export function PlayGestures({
       {stick ? (
         <Joystick origin={stick.origin} knob={stick.knob} fading={fading} avatar={avatar} tint={tint} />
       ) : null}
-      {hint && state.mode === "idle" && !state.moved ? (
-        <div data-inkt="move-hint" className="play-move-hint">
+      {hint ? (
+        <div
+          data-inkt="move-hint"
+          className={`play-move-hint${landscape ? " is-landscape" : ""}${hintOn ? "" : " is-out"}`}
+        >
           touch anywhere to move
         </div>
       ) : null}

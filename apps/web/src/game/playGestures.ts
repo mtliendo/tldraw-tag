@@ -7,6 +7,10 @@ export const ZOOM_IN_MAX = 1.6;
 export const PORTRAIT_MAX_VISIBLE_ARENA = 0.6;
 export const LANDSCAPE_MAX_VISIBLE_ARENA = 0.75;
 export const JOY_FADE_MS = 180;
+export const HINT_MS = 4000;
+
+export type FollowPad = { left: number; right: number; top: number; bottom: number };
+export type Box = { x: number; y: number; w: number; h: number };
 
 export type Vec = { x: number; y: number };
 
@@ -62,11 +66,62 @@ export function zoomLimits(opts: {
   blobPx: number;
 }): ZoomLimits {
   const blobZoom = defaultFollowZoom(opts.blobPx);
-  const minZoom = minFollowZoom(opts.viewportW, opts.landscape);
   const coverArena = Math.max(opts.viewportW / ARENA_W, opts.viewportH / ARENA_H);
-  const base = Math.max(blobZoom, minZoom, coverArena);
+  const minZoom = Math.max(minFollowZoom(opts.viewportW, opts.landscape), coverArena);
+  const base = Math.max(blobZoom, minZoom);
   const maxZoom = base * ZOOM_IN_MAX;
   return { base, minZoom, maxZoom: Math.max(maxZoom, minZoom) };
+}
+
+export function moveHintVisible(moved: boolean, elapsedMs: number) {
+  return !moved && elapsedMs < HINT_MS;
+}
+
+export function followBounds(zone: Box, viewportW: number, viewportH: number, zoom: number): Box {
+  const viewW = viewportW / zoom;
+  const viewH = viewportH / zoom;
+  if (viewW > zone.w || viewH > zone.h) {
+    return { x: 0, y: 0, w: ARENA_W, h: ARENA_H };
+  }
+  return { x: zone.x, y: zone.y, w: zone.w, h: zone.h };
+}
+
+/** Don't zoom out past the current playfield; arena-cover is the absolute floor. */
+export function zoomFloor(viewportW: number, viewportH: number, zone: Box, limits: ZoomLimits) {
+  const coverZone = Math.max(
+    viewportW / Math.max(1, zone.w),
+    viewportH / Math.max(1, zone.h),
+  );
+  return Math.max(limits.minZoom, coverZone);
+}
+
+/** Keep the follow camera on the playfield. Center when the board is smaller than the view. */
+export function followCamera(opts: {
+  viewportW: number;
+  viewportH: number;
+  zoom: number;
+  player: { x: number; y: number } | null;
+  bounds: Box;
+  pad?: FollowPad;
+}) {
+  const viewW = opts.viewportW / opts.zoom;
+  const viewH = opts.viewportH / opts.zoom;
+  const pad = opts.pad ?? { left: 0, right: 0, top: 0, bottom: 0 };
+  const innerW = Math.max(1, opts.viewportW - pad.left - pad.right);
+  const innerH = Math.max(1, opts.viewportH - pad.top - pad.bottom);
+  const focusX = pad.left + innerW / 2;
+  const focusY = pad.top + innerH / 2;
+  const originX = opts.player?.x ?? opts.bounds.x + opts.bounds.w / 2;
+  const originY = opts.player?.y ?? opts.bounds.y + opts.bounds.h / 2;
+  let left = originX - focusX / opts.zoom;
+  let top = originY - focusY / opts.zoom;
+  const maxLeft = opts.bounds.x + Math.max(0, opts.bounds.w - viewW);
+  const maxTop = opts.bounds.y + Math.max(0, opts.bounds.h - viewH);
+  left = Math.min(Math.max(left, opts.bounds.x), maxLeft);
+  top = Math.min(Math.max(top, opts.bounds.y), maxTop);
+  if (viewW >= opts.bounds.w) left = opts.bounds.x + (opts.bounds.w - viewW) / 2;
+  if (viewH >= opts.bounds.h) top = opts.bounds.y + (opts.bounds.h - viewH) / 2;
+  return { left, top, zoom: opts.zoom, centered: viewW >= opts.bounds.w || viewH >= opts.bounds.h };
 }
 
 export function clampZoom(zoom: number, limits: ZoomLimits) {

@@ -112,6 +112,21 @@ async function assertNoStick(page, label) {
   if (joy) throw new Error(`${label}: joystick should be hidden at rest`);
 }
 
+async function assertHintClearOfPlayer(page, label) {
+  const report = await page.evaluate(() => {
+    const hint = document.querySelector('[data-inkt="move-hint"]:not(.is-out)')?.getBoundingClientRect();
+    const you = [...document.querySelectorAll('[data-inkt="label"]')].find((el) =>
+      /\byou\b/i.test(el.textContent || ""),
+    );
+    const self = you?.closest("[data-inkt='player']")?.getBoundingClientRect();
+    if (!hint || !self) return { ok: Boolean(hint), overlap: false, missing: !hint };
+    const overlap = !(hint.right < self.left || hint.left > self.right || hint.bottom < self.top || hint.top > self.bottom);
+    return { ok: !overlap, overlap, hint: { top: hint.top, bottom: hint.bottom }, self: { top: self.top, bottom: self.bottom } };
+  });
+  if (report.missing) throw new Error(`${label}: move hint should be visible at rest`);
+  if (!report.ok) throw new Error(`${label}: move hint covers the player`);
+}
+
 async function spawnStick(page, nx = 0.48, ny = 0.46) {
   const p = await gesturePoint(page, nx, ny);
   await sendPointer(page, "down", 11, p.x, p.y);
@@ -287,11 +302,15 @@ await assertItChrome(screen, "08-projector-20");
 await admin.getByRole("button", { name: /pin tinted it/i }).click();
 await joinPhone.waitForSelector('[data-inkt="it-flame"]', { timeout: 8000 });
 await joinPhone.waitForTimeout(400);
+await joinPhone.evaluate(() => window.dispatchEvent(new Event("inkt-reset-gestures")));
+await joinPhone.waitForTimeout(200);
 await shot(joinPhone, "04c-player-mobile.png");
 await assertBoard(joinPhone, "04c-player-mobile", { follow: true });
 await assertItChrome(joinPhone, "04c-player-mobile");
 await assertNoStick(joinPhone, "04c-player-mobile");
+await assertHintClearOfPlayer(joinPhone, "04c-player-mobile");
 await spawnStick(joinPhone);
+await joinPhone.waitForTimeout(320);
 await shot(joinPhone, "14-player-mobile-stick.png");
 await releasePointers(joinPhone, [11]);
 await joinPhone.waitForTimeout(220);
@@ -322,6 +341,7 @@ await assertItChrome(joinPhone, "10-iphone-landscape");
 await assertLandscapeChrome(joinPhone, "10-iphone-mid");
 await assertNoStick(joinPhone, "10-iphone-landscape");
 await spawnStick(joinPhone, 0.46, 0.52);
+await joinPhone.waitForTimeout(320);
 await shot(joinPhone, "17-player-iphone-landscape-stick.png");
 await releasePointers(joinPhone, [11]);
 await joinPhone.waitForTimeout(220);
@@ -364,9 +384,14 @@ for (let attempt = 0; attempt < 5; attempt++) {
 }
 if (boardErr) throw boardErr;
 {
-  const itSprites = await screen.evaluate(() =>
-    [...document.querySelectorAll('[data-inkt="player"] [data-inkt="it-flame"]')].length,
-  );
+  let itSprites = 0;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    itSprites = await screen.evaluate(() =>
+      [...document.querySelectorAll('[data-inkt="player"] [data-inkt="it-flame"]')].length,
+    );
+    if (itSprites === 1) break;
+    await screen.waitForTimeout(400);
+  }
   if (itSprites !== 1) throw new Error(`05b expected one IT flame, got ${itSprites}`);
   const iceLeak = await screen.evaluate(() => {
     const zone = document.querySelector('[data-inkt="zone"]')?.getBoundingClientRect();

@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ARENA_W, LANDSCAPE_BLOB_PX, MOBILE_BLOB_PX, PLAYER_TOKEN } from "@inkt/shared";
+import { ARENA_H, ARENA_W, LANDSCAPE_BLOB_PX, MOBILE_BLOB_PX, PLAYER_TOKEN } from "@inkt/shared";
 import {
+  HINT_MS,
   LANDSCAPE_MAX_VISIBLE_ARENA,
   PORTRAIT_MAX_VISIBLE_ARENA,
   STICK_TRAVEL,
   ZOOM_IN_MAX,
   clampZoom,
+  followBounds,
+  followCamera,
   idleGesture,
+  moveHintVisible,
   reduceGesture,
   stickFromPointer,
   visibleArenaWidth,
@@ -37,8 +41,9 @@ function run(events: Parameters<typeof reduceGesture>[1][], limits = portrait, s
 
 describe("play gestures", () => {
   it("clamps follow zoom so the whole arena never fits", () => {
-    assert.equal(portrait.minZoom, 390 / (ARENA_W * PORTRAIT_MAX_VISIBLE_ARENA));
-    assert.equal(landscape.minZoom, 844 / (ARENA_W * LANDSCAPE_MAX_VISIBLE_ARENA));
+    assert.ok(portrait.minZoom >= 700 / ARENA_H - 1e-9);
+    assert.ok(portrait.minZoom >= 390 / (ARENA_W * PORTRAIT_MAX_VISIBLE_ARENA) - 1e-9);
+    assert.ok(landscape.minZoom >= 844 / (ARENA_W * LANDSCAPE_MAX_VISIBLE_ARENA) - 1e-9);
     assert.ok(portrait.maxZoom / portrait.base - ZOOM_IN_MAX < 1e-9);
     assert.ok(landscape.base >= landscape.minZoom);
     assert.ok(visibleArenaWidth(390, portrait.minZoom) <= PORTRAIT_MAX_VISIBLE_ARENA + 1e-9);
@@ -121,6 +126,44 @@ describe("play gestures", () => {
   it("ignores a stray pointer that never started on the board", () => {
     const state = run([{ type: "move", id: 9, x: 10, y: 10 }]);
     assert.equal(state.mode, "idle");
+  });
+
+  it("hides the move hint after the first touch or 4s", () => {
+    assert.equal(moveHintVisible(false, 0), true);
+    assert.equal(moveHintVisible(true, 0), false);
+    assert.equal(moveHintVisible(false, HINT_MS), false);
+  });
+
+  it("uses the zone while zoomed in and the arena when the view is larger than the zone", () => {
+    const zone = { x: 200, y: 100, w: 800, h: 500 };
+    const tight = followBounds(zone, 390, 500, 2);
+    assert.deepEqual(tight, zone);
+    const wide = followBounds(zone, 390, 733, 0.5);
+    assert.deepEqual(wide, { x: 0, y: 0, w: ARENA_W, h: ARENA_H });
+  });
+
+  it("clamps follow to the arena and centers when the board is shorter than the view", () => {
+    const bounds = { x: 0, y: 0, w: ARENA_W, h: ARENA_H };
+    const follow = followCamera({
+      viewportW: 390,
+      viewportH: 500,
+      zoom: 1,
+      player: { x: 200, y: 80 },
+      bounds,
+    });
+    assert.ok(follow.top >= 0);
+    assert.ok(follow.top + 500 <= ARENA_H + 1e-6);
+    assert.ok(Math.abs(follow.top - (80 - 250)) > 10);
+
+    const wide = followCamera({
+      viewportW: 390,
+      viewportH: 1100,
+      zoom: 1,
+      player: { x: 100, y: 0 },
+      bounds,
+    });
+    assert.equal(wide.centered, true);
+    assert.ok(Math.abs(wide.top - (ARENA_H - 1100) / 2) < 1e-6);
   });
 
   it("resets zoom to the default on rotate", () => {

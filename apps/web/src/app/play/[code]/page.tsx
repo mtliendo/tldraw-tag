@@ -223,6 +223,7 @@ export default function PlayPage() {
           avatar={me?.avatar}
           tint={me ? playerTint(me, view.players) : 0}
           hint={showHint}
+          landscape={landscape}
         />
         {view.phase === "lobby" && (
           <div

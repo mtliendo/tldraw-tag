@@ -83,7 +83,7 @@ describe("TagEngine loop", () => {
     engine.start();
     engine.showcase();
     const pub = engine.toPublic();
-    assert.ok(pub.powerUps.length >= 4);
+    assert.ok(pub.powerUps.length >= 3);
     assert.ok(pub.walls.length >= 1);
     assert.ok(pub.pulses.length >= 1);
     assert.ok(pub.players.some((p) => p.frozen));

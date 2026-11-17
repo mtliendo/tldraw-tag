@@ -40,7 +40,7 @@ export default function JoinPage() {
               onClick={() => setAvatar(a.id)}
               style={{
                 aspectRatio: "1",
-                borderRadius: "46% 54% 48% 52%",
+                borderRadius: "50%",
                 border: avatar === a.id ? "3px solid var(--ink)" : "2px solid var(--ink)",
                 background: a.color,
                 display: "grid",

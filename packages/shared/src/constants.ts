@@ -9,9 +9,9 @@ export const PLAYER_RADIUS = 36;
 export const PLAYER_SPEED = 210;
 export const SPEEDSTER_MULTIPLIER = 2.15;
 export const DIAGONAL_LIMIT = 1;
-export const PLAYER_TOKEN = 80;
-export const PLAYER_LABEL_H = 30;
-export const PLAYER_LABEL_W = 124;
+export const PLAYER_TOKEN = 72;
+export const PLAYER_LABEL_H = 20;
+export const PLAYER_LABEL_W = 96;
 
 export const TAG_DISTANCE = PLAYER_RADIUS * 2 + 8;
 export const TAG_COOLDOWN = 0.55;
@@ -31,7 +31,7 @@ export const POWER_SPAWN_MIN = 2.2;
 export const POWER_SPAWN_MAX = 4.8;
 export const POWER_PULSE_WARN = 1;
 export const POWER_RADIUS = 28;
-export const POWER_TOKEN = 72;
+export const POWER_TOKEN = 56;
 export const POWER_MAX_ON_BOARD = 10;
 
 export const WALL_WIDTH = 140;

@@ -89,6 +89,10 @@ button {
   pointer-events: none;
 }
 
+.board-wrap.interactive .tl-container {
+  pointer-events: auto;
+}
+
 .board-wrap a[href*="tldraw"],
 .board-wrap [data-testid="tl-watermark-unlicensed"],
 .board-wrap [data-testid="tl-watermark-licensed"] {
@@ -210,10 +214,10 @@ h2,
 @keyframes gem-bob {
   0%,
   100% {
-    transform: rotate(-6deg) translateY(0);
+    transform: translateY(0);
   }
   50% {
-    transform: rotate(-2deg) translateY(-7px);
+    transform: translateY(-4px);
   }
 }
 
@@ -246,7 +250,7 @@ h2,
     transform: translateY(0) scale(1, 1);
   }
   50% {
-    transform: translateY(-5px) scale(1.05, 0.95);
+    transform: translateY(-3px) scale(1.03, 0.97);
   }
 }
 
@@ -298,6 +302,7 @@ h2,
 
 .player-label {
   font-family: var(--font-display);
+  letter-spacing: 0;
 }
 
 .confetti-bit {

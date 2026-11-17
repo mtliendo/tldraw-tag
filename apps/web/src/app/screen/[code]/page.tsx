@@ -31,7 +31,7 @@ export default function ScreenPage() {
       }}
     >
       <section style={{ position: "relative", minWidth: 0 }}>
-        <GameCanvas view={view} />
+        <GameCanvas view={view} interactive />
 
         <div
           style={{

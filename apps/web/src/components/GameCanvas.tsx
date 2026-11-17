@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Tldraw, createShapeId, type Editor, type TLShapeId } from "tldraw";
 import "tldraw/tldraw.css";
 import { ARENA_H, ARENA_W, PLAYER_TOKEN, POWER_TOKEN, ZONE_WARN_SECONDS } from "@inkt/shared";
@@ -11,15 +11,18 @@ import { Confetti } from "@/components/Confetti";
 
 const license = process.env.NEXT_PUBLIC_TLDRAW_LICENSE_KEY;
 const TOKEN_R = PLAYER_TOKEN / 2;
+const LABEL_CROWD = 15;
 
 export function GameCanvas({
   view,
   selfId,
   fitMode = "contain",
+  interactive = false,
 }: {
   view: ViewState;
   selfId?: string | null;
   fitMode?: "contain" | "cover";
+  interactive?: boolean;
 }) {
   const editorRef = useRef<Editor | null>(null);
   const known = useRef(new Set<TLShapeId>());
@@ -27,6 +30,7 @@ export function GameCanvas({
   const squashUntil = useRef(new Map<string, number>());
   const fitModeRef = useRef(fitMode);
   fitModeRef.current = fitMode;
+  const [hoverId, setHoverId] = useState<string | null>(null);
 
   const fit = useCallback((editor: Editor) => {
     editor.setCameraOptions({ isLocked: false });
@@ -67,8 +71,9 @@ export function GameCanvas({
         }
       };
 
-      const warn =
-        state.shrinking || (state.shrinkIn > 0 && state.shrinkIn <= ZONE_WARN_SECONDS) ? 1 : 0;
+      const warning =
+        !state.shrinking && state.shrinkIn > 0 && state.shrinkIn <= ZONE_WARN_SECONDS ? 1 : 0;
+      const crowded = state.players.length > LABEL_CROWD;
 
       make("arena", {
         type: "inkt-arena",
@@ -93,7 +98,7 @@ export function GameCanvas({
         type: "inkt-next-zone",
         x: state.targetZone.x,
         y: state.targetZone.y,
-        props: { w: state.targetZone.w, h: state.targetZone.h, warn },
+        props: { w: state.targetZone.w, h: state.targetZone.h, warn: warning },
       });
       make("zone", {
         type: "inkt-zone",
@@ -102,7 +107,7 @@ export function GameCanvas({
         props: {
           w: state.zone.w,
           h: state.zone.h,
-          warn,
+          warn: warning,
           shrinking: state.shrinking,
         },
       });
@@ -117,9 +122,9 @@ export function GameCanvas({
       for (const pulse of state.pulses) {
         make(`pulse:${pulse.id}`, {
           type: "inkt-pulse",
-          x: pulse.x - 55,
-          y: pulse.y - 55,
-          props: { w: 110, h: 110, kind: pulse.kind, progress: pulse.progress },
+          x: pulse.x - 32,
+          y: pulse.y - 32,
+          props: { w: 64, h: 64, kind: pulse.kind, progress: pulse.progress },
         });
       }
       for (const pow of state.powerUps) {
@@ -127,7 +132,7 @@ export function GameCanvas({
           type: "inkt-power",
           x: pow.x - POWER_TOKEN / 2,
           y: pow.y - POWER_TOKEN / 2,
-          props: { w: 88, h: 100, kind: pow.kind },
+          props: { w: 64, h: 78, kind: pow.kind },
         });
       }
       for (const decoy of state.decoys) {
@@ -147,13 +152,15 @@ export function GameCanvas({
         }
         prevIt.current.set(p.id, p.isIt);
         const stack = p.labelStack ?? 0;
-        const boxH = 88 + (p.frozen ? 18 : 0) + (stack + 1) * 34;
+        const showLabel =
+          p.isIt || p.id === selfId || p.frozen || !crowded || p.id === hoverId;
+        const boxH = TOKEN_R * 2 + 8 + (showLabel ? 20 + stack * 18 : 0);
         make(`player:${p.id}`, {
           type: "inkt-player",
-          x: p.x - 80,
+          x: p.x - 70,
           y: p.y - TOKEN_R,
           props: {
-            w: 160,
+            w: 140,
             h: boxH,
             name: p.name,
             avatar: p.avatar,
@@ -169,6 +176,8 @@ export function GameCanvas({
             labelAbove: false,
             labelStack: stack,
             squash: (squashUntil.current.get(p.id) ?? 0) > now,
+            showLabel,
+            playerId: p.id,
           },
         });
       }
@@ -180,7 +189,7 @@ export function GameCanvas({
       }
       if (puts.length) editor.updateShapes(puts);
     },
-    [selfId],
+    [selfId, hoverId],
   );
 
   useEffect(() => {
@@ -190,14 +199,25 @@ export function GameCanvas({
   }, [view, sync]);
 
   return (
-    <div className="board-wrap">
+    <div
+      className={interactive ? "board-wrap interactive" : "board-wrap"}
+      onPointerOver={(e) => {
+        if (!interactive) return;
+        const el = (e.target as HTMLElement).closest("[data-player-id]");
+        const id = el?.getAttribute("data-player-id") ?? null;
+        setHoverId(id);
+      }}
+      onPointerLeave={() => {
+        if (interactive) setHoverId(null);
+      }}
+    >
       <Tldraw
         licenseKey={license}
         hideUi
         shapeUtils={INKT_SHAPES}
         onMount={(editor) => {
           editorRef.current = editor;
-          editor.updateInstanceState({ isGridMode: true });
+          editor.updateInstanceState({ isGridMode: false });
           editor.user.updateUserPreferences({ colorScheme: "light" });
           editor.setCurrentTool("hand");
           known.current = new Set();

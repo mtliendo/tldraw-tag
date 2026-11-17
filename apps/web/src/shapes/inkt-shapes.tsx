@@ -37,6 +37,8 @@ declare module "tldraw" {
       labelAbove: boolean;
       labelStack: number;
       squash: boolean;
+      showLabel: boolean;
+      playerId: string;
     };
     "inkt-power": { w: number; h: number; kind: string };
     "inkt-pulse": { w: number; h: number; kind: string; progress: number };
@@ -65,39 +67,31 @@ function RectIndicator({ w, h }: { w: number; h: number }) {
   return <rect width={w} height={h} />;
 }
 
+const STROKE = 3;
+
 function DrawRect({
   w,
   h,
   color,
   seed,
   dash,
-  width = 5,
 }: {
   w: number;
   h: number;
   color: string;
   seed?: number;
   dash?: string;
-  width?: number;
 }) {
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none" style={{ overflow: "visible" }}>
       <path
-        d={wobbleRectPath(w, h, seed ?? 1, 7)}
+        d={wobbleRectPath(w, h, seed ?? 1, dash ? 1.6 : 2.2)}
         stroke={color}
-        strokeWidth={width + 4}
-        opacity={0.18}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d={wobbleRectPath(w, h, (seed ?? 1) + 0.4, 6)}
-        stroke={color}
-        strokeWidth={width}
+        strokeWidth={STROKE}
         strokeDasharray={dash}
+        opacity={dash ? 0.55 : 1}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={dash ? "warn-dash" : undefined}
       />
     </svg>
   );
@@ -118,23 +112,12 @@ export class ArenaShapeUtil extends ShapeUtil<ArenaShape> {
       <HTMLContainer>
         <svg width={w} height={h} style={{ position: "absolute", inset: 0 }}>
           <defs>
-            <pattern id="inkt-dots" width="28" height="28" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.05" fill="rgba(29,29,29,0.1)" />
+            <pattern id="inkt-dots" width="24" height="24" patternUnits="userSpaceOnUse">
+              <circle cx="1.2" cy="1.2" r="0.9" fill="rgba(29,29,29,0.08)" />
             </pattern>
           </defs>
           <rect width={w} height={h} fill="#f7f9fb" />
           <rect width={w} height={h} fill="url(#inkt-dots)" />
-          <path
-            d="M60 80c50-16 110 8 140 18M1380 90c40 10 90-4 120 8M80 830c70 18 140 4 190-10"
-            stroke="#1d1d1d"
-            strokeOpacity="0.12"
-            strokeWidth="3"
-            fill="none"
-            strokeLinecap="round"
-          />
-          <text x="48" y="860" fill="#1d1d1d" fillOpacity="0.22" fontSize="32" fontFamily="var(--font-draw), Shantell Sans, cursive">
-            tldraw
-          </text>
         </svg>
       </HTMLContainer>
     );
@@ -174,7 +157,7 @@ export class DimShapeUtil extends ShapeUtil<DimShape> {
     return (
       <HTMLContainer>
         <svg width={w} height={h} style={{ pointerEvents: "none" }}>
-          <path fill="rgba(29,29,29,0.08)" fillRule="evenodd" d={`M0 0H${w}V${h}H0Z M${hx} ${hy}h${hw}v${hh}h${-hw}Z`} />
+          <path fill="rgba(29,29,29,0.05)" fillRule="evenodd" d={`M0 0H${w}V${h}H0Z M${hx} ${hy}h${hw}v${hh}h${-hw}Z`} />
         </svg>
       </HTMLContainer>
     );
@@ -205,19 +188,11 @@ export class ZoneShapeUtil extends ShapeUtil<ZoneShape> {
     return new Rectangle2d({ width: shape.props.w, height: shape.props.h, isFilled: false });
   }
   component(shape: ZoneShape) {
-    const warn = shape.props.warn > 0.05;
-    const color = warn || shape.props.shrinking ? "#e16919" : "#1d1d1d";
+    const color = shape.props.shrinking || shape.props.warn > 0.05 ? "#e16919" : "#1d1d1d";
     return (
       <HTMLContainer>
         <div style={{ width: shape.props.w, height: shape.props.h, pointerEvents: "none" }}>
-          <DrawRect
-            w={shape.props.w}
-            h={shape.props.h}
-            color={color}
-            seed={2}
-            dash={warn ? "14 10" : undefined}
-            width={warn ? 7 : 5}
-          />
+          <DrawRect w={shape.props.w} h={shape.props.h} color={color} seed={2} />
         </div>
       </HTMLContainer>
     );
@@ -251,10 +226,7 @@ export class NextZoneShapeUtil extends ShapeUtil<NextZoneShape> {
     return (
       <HTMLContainer>
         <div style={{ width: shape.props.w, height: shape.props.h, pointerEvents: "none" }}>
-          <DrawRect w={shape.props.w} h={shape.props.h} color="#e16919" seed={5} dash="8 12" width={4} />
-          <div className="kicker" style={{ position: "absolute", top: 12, left: 18, color: "#e16919", fontSize: 16 }}>
-            next zone
-          </div>
+          <DrawRect w={shape.props.w} h={shape.props.h} color="#e16919" seed={5} dash="10 12" />
         </div>
       </HTMLContainer>
     );
@@ -289,11 +261,13 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
     labelAbove: T.boolean,
     labelStack: T.number,
     squash: T.boolean,
+    showLabel: T.boolean,
+    playerId: T.string,
   };
   getDefaultProps() {
     return {
-      w: 160,
-      h: 160,
+      w: 140,
+      h: 120,
       name: "Player",
       avatar: "bolt",
       isIt: false,
@@ -308,25 +282,27 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
       labelAbove: false,
       labelStack: 0,
       squash: false,
+      showLabel: true,
+      playerId: "",
     };
   }
   getGeometry(shape: PlayerShape) {
-    return new Circle2d({ radius: 40, isFilled: true });
+    return new Circle2d({ radius: 36, isFilled: true });
   }
   component(shape: PlayerShape) {
     const avatar = avatarById(shape.props.avatar);
     const held = POWER_UPS[shape.props.powerId as PowerId];
-    const token = 80;
+    const token = 72;
     const stroke = shape.props.isIt ? "#e03131" : "#1d1d1d";
     const blobLeft = (shape.props.w - token) / 2;
-    const frozenPad = shape.props.frozen ? 18 : 0;
     return (
       <HTMLContainer>
         <div
+          data-player-id={shape.props.playerId}
           style={{
             width: shape.props.w,
             height: shape.props.h,
-            opacity: shape.props.ghost ? 0.4 : 1,
+            opacity: shape.props.ghost ? 0.42 : 1,
             position: "relative",
             overflow: "visible",
           }}
@@ -345,100 +321,62 @@ export class PlayerShapeUtil extends ShapeUtil<PlayerShape> {
           >
             {shape.props.frozen && (
               <svg
-                width={96}
-                height={96}
-                viewBox="0 0 96 96"
-                style={{ position: "absolute", left: -8, top: -8, pointerEvents: "none" }}
+                width={84}
+                height={84}
+                viewBox="0 0 84 84"
+                style={{ position: "absolute", left: -6, top: -6, pointerEvents: "none" }}
               >
-                <path
-                  d="M20 28c2-11 14-18 28-18s26 7 28 18c9 3 14 12 12 24-3 16-12 28-40 30S9 68 8 52c-2-12 3-21 12-24z"
-                  fill="rgba(138,163,255,0.55)"
-                  stroke="#4465e9"
-                  strokeWidth="3.5"
-                />
-                <path d="M34 22l4 10M50 18v12M66 24l-4 10" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
-                <path d="M30 70l-2 10M48 74v12M66 70l2 10" stroke="#4465e9" strokeWidth="2.6" strokeLinecap="round" />
+                <circle cx="42" cy="42" r="36" fill="rgba(68,101,233,0.16)" stroke="#4465e9" strokeWidth={STROKE} />
               </svg>
             )}
-            <svg width={token} height={token} viewBox="0 0 80 80">
-              <path d={blobPath(80, shape.props.name.length)} fill={avatar.color} stroke={stroke} strokeWidth={shape.props.isIt ? 6 : 4} />
+            <svg width={token} height={token} viewBox="0 0 72 72">
+              <path d={blobPath(72, shape.props.name.length)} fill={avatar.color} stroke={stroke} strokeWidth={STROKE} />
             </svg>
             <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
-              <AvatarGlyph glyph={avatar.glyph} accent={avatar.accent} size={36} />
+              <AvatarGlyph glyph={avatar.glyph} accent={avatar.accent} size={28} />
             </div>
-            <svg width={token} height={token} viewBox="0 0 80 80" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-              <circle cx="32" cy="34" r="3.2" fill="#fff" stroke="#1d1d1d" strokeWidth="1.2" />
-              <circle cx="48" cy="34" r="3.2" fill="#fff" stroke="#1d1d1d" strokeWidth="1.2" />
-              <circle cx="32.6" cy="34.4" r="1.4" fill="#1d1d1d" />
-              <circle cx="48.6" cy="34.4" r="1.4" fill="#1d1d1d" />
-            </svg>
-            {shape.props.isIt && (
-              <div style={{ position: "absolute", top: -18, left: 0, right: 0, textAlign: "center", fontWeight: 800, color: "#e03131", fontSize: 16 }}>
-                it!
-              </div>
-            )}
-            {shape.props.frozen && (
-              <div
-                style={{
-                  position: "absolute",
-                  left: "50%",
-                  bottom: -6,
-                  transform: "translateX(-50%) rotate(-3deg)",
-                  background: "#8AA3FF",
-                  color: "#1d1d1d",
-                  border: "2px solid #1d1d1d",
-                  boxShadow: "2px 2px 0 #1d1d1d",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  padding: "1px 7px",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                frozen
-              </div>
-            )}
             {held && (
               <div
                 style={{
                   position: "absolute",
-                  right: -8,
-                  bottom: -6,
-                  width: 32,
-                  height: 32,
+                  right: -4,
+                  bottom: -4,
+                  width: 22,
+                  height: 22,
                   background: held.color,
-                  transform: "rotate(8deg)",
-                  border: "2px solid #1d1d1d",
+                  border: `${STROKE}px solid #1d1d1d`,
                   display: "grid",
                   placeItems: "center",
-                  boxShadow: "2px 2px 0 #1d1d1d",
                 }}
               >
-                <PowerGlyph icon={held.icon} color={held.ink} size={18} />
+                <PowerGlyph icon={held.icon} color={held.ink} size={12} />
               </div>
             )}
           </div>
-          <div
-            className="player-label"
-            style={{
-              position: "absolute",
-              left: shape.props.w / 2,
-              top: token + 8 + frozenPad + shape.props.labelStack * 34,
-              transform: "translateX(-50%) rotate(-1.5deg)",
-              fontSize: 15,
-              fontWeight: 700,
-              color: "#1d1d1d",
-              background: "#FCE19C",
-              padding: "2px 8px",
-              border: "2px solid #1d1d1d",
-              boxShadow: "2px 2px 0 #1d1d1d",
-              maxWidth: 108,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {shape.props.name}
-          </div>
+          {shape.props.showLabel && (
+            <div
+              className="player-label"
+              style={{
+                position: "absolute",
+                left: shape.props.w / 2,
+                top: token + 4 + shape.props.labelStack * 18,
+                transform: "translateX(-50%)",
+                fontSize: 12,
+                fontWeight: 600,
+                color: shape.props.isIt ? "#e03131" : "#1d1d1d",
+                background: "rgba(255,255,255,0.92)",
+                padding: "1px 7px",
+                borderRadius: 999,
+                border: "1.5px solid #1d1d1d",
+                maxWidth: 88,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {shape.props.isIt ? `it · ${shape.props.name}` : shape.props.name}
+            </div>
+          )}
         </div>
       </HTMLContainer>
     );
@@ -458,10 +396,10 @@ export class PowerShapeUtil extends ShapeUtil<PowerShape> {
   static override type = "inkt-power" as const;
   static override props: RecordProps<PowerShape> = { w: T.number, h: T.number, kind: T.string };
   getDefaultProps() {
-    return { w: 88, h: 100, kind: "speedster" };
+    return { w: 64, h: 78, kind: "speedster" };
   }
   getGeometry(shape: PowerShape) {
-    return new Circle2d({ radius: 36, isFilled: true });
+    return new Circle2d({ radius: 28, isFilled: true });
   }
   component(shape: PowerShape) {
     const def = POWER_UPS[shape.props.kind as PowerId];
@@ -470,20 +408,19 @@ export class PowerShapeUtil extends ShapeUtil<PowerShape> {
         <div className="gem-bob" style={{ width: shape.props.w, height: shape.props.h, display: "flex", flexDirection: "column", alignItems: "center" }}>
           <div
             style={{
-              width: 72,
-              height: 72,
-              background: def?.color ?? "#FCE19C",
+              width: 52,
+              height: 52,
+              background: def?.color ?? "#f1ac4b",
               color: def?.ink ?? "#1d1d1d",
               display: "grid",
               placeItems: "center",
-              border: "3px solid #1d1d1d",
-              boxShadow: "3px 3px 0 #1d1d1d",
-              transform: "rotate(-5deg)",
+              border: `${STROKE}px solid #1d1d1d`,
+              borderRadius: 8,
             }}
           >
-            {def ? <PowerGlyph icon={def.icon} color={def.ink} size={36} /> : null}
+            {def ? <PowerGlyph icon={def.icon} color={def.ink} size={24} /> : null}
           </div>
-          <div style={{ marginTop: 6, fontSize: 14, fontWeight: 700 }}>{def?.verb ?? "loot"}</div>
+          <div style={{ marginTop: 4, fontSize: 11, fontWeight: 600 }}>{def?.verb ?? "loot"}</div>
         </div>
       </HTMLContainer>
     );
@@ -505,14 +442,13 @@ export class PulseShapeUtil extends ShapeUtil<PulseShape> {
     progress: T.number,
   };
   getDefaultProps() {
-    return { w: 110, h: 110, kind: "speedster", progress: 0 };
+    return { w: 64, h: 64, kind: "speedster", progress: 0 };
   }
   getGeometry(shape: PulseShape) {
     return new Circle2d({ radius: shape.props.w / 2, isFilled: false });
   }
   component(shape: PulseShape) {
     const def = POWER_UPS[shape.props.kind as PowerId];
-    const color = def?.color ?? "#4465e9";
     return (
       <HTMLContainer>
         <div
@@ -520,14 +456,14 @@ export class PulseShapeUtil extends ShapeUtil<PulseShape> {
           style={{
             width: shape.props.w,
             height: shape.props.h,
-            borderRadius: "46% 54% 48% 52%",
-            border: `4px dashed ${color}`,
+            borderRadius: "50%",
+            border: `${STROKE}px dashed #1d1d1d`,
             display: "grid",
             placeItems: "center",
-            opacity: 0.5 + shape.props.progress * 0.5,
+            opacity: 0.45 + shape.props.progress * 0.4,
           }}
         >
-          {def ? <PowerGlyph icon={def.icon} color="#1d1d1d" size={28} /> : null}
+          {def ? <PowerGlyph icon={def.icon} color="#1d1d1d" size={18} /> : null}
         </div>
       </HTMLContainer>
     );
@@ -554,7 +490,7 @@ export class WallShapeUtil extends ShapeUtil<WallShape> {
     return (
       <HTMLContainer>
         <svg width={w} height={h}>
-          <path d={wobbleRectPath(w, h, 3, 2)} fill="#FAA475" stroke="#1d1d1d" strokeWidth="3" />
+          <path d={wobbleRectPath(w, h, 3, 1.4)} fill="#e16919" stroke="#1d1d1d" strokeWidth={STROKE} />
         </svg>
       </HTMLContainer>
     );
@@ -586,8 +522,8 @@ export class DecoyShapeUtil extends ShapeUtil<DecoyShape> {
     return (
       <HTMLContainer>
         <div style={{ width: shape.props.w, opacity: 0.5, display: "grid", placeItems: "center" }}>
-          <svg width={68} height={68} viewBox="0 0 80 80">
-            <path d={blobPath(80, 4)} fill={avatar.color} stroke="#4ba1f1" strokeWidth="4" strokeDasharray="6 5" />
+          <svg width={56} height={56} viewBox="0 0 72 72">
+            <path d={blobPath(72, 4)} fill={avatar.color} stroke="#4465e9" strokeWidth={STROKE} strokeDasharray="5 5" />
           </svg>
         </div>
       </HTMLContainer>

@@ -253,11 +253,9 @@ export class TagEngine {
     s.powerUps = {};
     s.pulses = {};
     const gems: Array<{ kind: PowerId; fx: number; fy: number }> = [
-      { kind: "speedster", fx: 0.2, fy: 0.28 },
-      { kind: "ghost", fx: 0.38, fy: 0.16 },
-      { kind: "shield", fx: 0.58, fy: 0.18 },
-      { kind: "swapper", fx: 0.22, fy: 0.52 },
-      { kind: "freezer", fx: 0.36, fy: 0.44 },
+      { kind: "speedster", fx: 0.16, fy: 0.26 },
+      { kind: "shield", fx: 0.16, fy: 0.58 },
+      { kind: "freezer", fx: 0.34, fy: 0.4 },
     ];
     for (const gem of gems) {
       const id = uid("pow");

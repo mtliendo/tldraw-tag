@@ -32,7 +32,7 @@ export function layoutPlayers(players: ViewPlayer[], zone: Zone): LaidOutPlayer[
     labelW: labelWidth(p.name),
   }));
 
-  const minSep = PLAYER_TOKEN + 28;
+  const minSep = PLAYER_TOKEN + 40;
   for (let iter = 0; iter < 14; iter++) {
     for (let i = 0; i < laid.length; i++) {
       for (let j = 0; j < i; j++) {

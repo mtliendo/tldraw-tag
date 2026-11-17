@@ -15,7 +15,7 @@ import {
   clampToZoneArt,
   playerTint,
 } from "@inkt/shared";
-import { ZOOM_IN_MAX, clampZoom, followBounds, followCamera, zoomFloor, zoomLimits } from "@/game/playGestures";
+import { ZOOM_IN_MAX, clampZoom, followBounds, followCamera, zoomLimits } from "@/game/playGestures";
 import { INKT_SHAPES } from "@/shapes/inkt-shapes";
 import { liveLabelScale, layoutPlayers } from "@/game/layoutPlayers";
 import type { ViewState } from "@/game/types";
@@ -105,9 +105,8 @@ export function GameCanvas({
       const coverZone = Math.max(vp.w / Math.max(1, zone.w), vp.h / Math.max(1, zone.h));
       const fallback = Math.max(limits.base, coverZone);
       const zoom = clampZoom(cameraZoomRef.current ?? fallback, {
-        minZoom: zoomFloor(vp.w, vp.h, zone, limits),
+        ...limits,
         maxZoom: Math.max(limits.maxZoom, fallback * ZOOM_IN_MAX),
-        base: fallback,
       });
       const cam = followCamera({
         viewportW: vp.w,

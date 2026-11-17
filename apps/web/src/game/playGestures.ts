@@ -66,9 +66,9 @@ export function zoomLimits(opts: {
   blobPx: number;
 }): ZoomLimits {
   const blobZoom = defaultFollowZoom(opts.blobPx);
-  const coverArena = Math.max(opts.viewportW / ARENA_W, opts.viewportH / ARENA_H);
-  const minZoom = Math.max(minFollowZoom(opts.viewportW, opts.landscape), coverArena);
-  const base = Math.max(blobZoom, minZoom);
+  const minZoom = minFollowZoom(opts.viewportW, opts.landscape);
+  // Default stays tighter than the zoom-out cap so pinch-out actually widens the view.
+  const base = Math.max(blobZoom, minZoom * 1.3);
   const maxZoom = base * ZOOM_IN_MAX;
   return { base, minZoom, maxZoom: Math.max(maxZoom, minZoom) };
 }
@@ -84,15 +84,6 @@ export function followBounds(zone: Box, viewportW: number, viewportH: number, zo
     return { x: 0, y: 0, w: ARENA_W, h: ARENA_H };
   }
   return { x: zone.x, y: zone.y, w: zone.w, h: zone.h };
-}
-
-/** Don't zoom out past the current playfield; arena-cover is the absolute floor. */
-export function zoomFloor(viewportW: number, viewportH: number, zone: Box, limits: ZoomLimits) {
-  const coverZone = Math.max(
-    viewportW / Math.max(1, zone.w),
-    viewportH / Math.max(1, zone.h),
-  );
-  return Math.max(limits.minZoom, coverZone);
 }
 
 /** Keep the follow camera on the playfield. Center when the board is smaller than the view. */
@@ -171,10 +162,10 @@ function pointerList(pointers: Record<number, Vec>) {
 export function reduceGesture(
   state: GestureState,
   event: GestureEvent,
-  ctx: { now: number; limits: ZoomLimits },
+  ctx: { now: number; limits: ZoomLimits; startZoom?: number },
 ): GestureState {
   if (event.type === "reset") {
-    return idleGesture(ctx.limits.base);
+    return idleGesture(ctx.startZoom ?? ctx.limits.base);
   }
 
   const pointers = { ...state.pointers };

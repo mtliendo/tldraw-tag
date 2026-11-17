@@ -21,6 +21,7 @@ export function PlayGestures({
   tint = 0,
   hint = false,
   landscape = false,
+  startZoom,
 }: {
   enabled: boolean;
   limits: ZoomLimits;
@@ -30,15 +31,18 @@ export function PlayGestures({
   tint?: number;
   hint?: boolean;
   landscape?: boolean;
+  startZoom?: number;
 }) {
   const layer = useRef<HTMLDivElement>(null);
   const limitsRef = useRef(limits);
   limitsRef.current = limits;
+  const startZoomRef = useRef(startZoom ?? limits.base);
+  startZoomRef.current = startZoom ?? limits.base;
   const moveRef = useRef(onMove);
   moveRef.current = onMove;
   const zoomOut = useRef(onZoom);
   zoomOut.current = onZoom;
-  const [state, setState] = useState<GestureState>(() => idleGesture(limits.base));
+  const [state, setState] = useState<GestureState>(() => idleGesture(startZoom ?? limits.base));
   const stateRef = useRef(state);
   stateRef.current = state;
   const [hintExpired, setHintExpired] = useState(false);
@@ -52,7 +56,11 @@ export function PlayGestures({
 
   const dispatch = useCallback((event: GestureEvent) => {
     const prev = stateRef.current;
-    const next = reduceGesture(prev, event, { now: Date.now(), limits: limitsRef.current });
+    const next = reduceGesture(prev, event, {
+      now: Date.now(),
+      limits: limitsRef.current,
+      startZoom: startZoomRef.current,
+    });
     stateRef.current = next;
     setState(next);
     if (next.input.x !== prev.input.x || next.input.y !== prev.input.y) {

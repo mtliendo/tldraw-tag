@@ -137,11 +137,13 @@ async function spawnStick(page, nx = 0.48, ny = 0.46) {
 
 async function pinchZoom(page, factor) {
   const p = await gesturePoint(page, 0.5, 0.45);
-  const spread = 70;
+  const spread = 80;
   await sendPointer(page, "down", 21, p.x - spread, p.y);
   await sendPointer(page, "down", 22, p.x + spread, p.y);
-  await sendPointer(page, "move", 22, p.x + spread * factor, p.y);
-  await page.waitForTimeout(80);
+  const end = Math.max(4, spread * factor);
+  await sendPointer(page, "move", 21, p.x - end, p.y);
+  await sendPointer(page, "move", 22, p.x + end, p.y);
+  await page.waitForTimeout(120);
 }
 
 async function releasePointers(page, ids) {
@@ -151,6 +153,17 @@ async function releasePointers(page, ids) {
 
 async function readZoom(page) {
   return page.evaluate(() => Number(document.querySelector("[data-inkt-zoom]")?.getAttribute("data-inkt-zoom") || "0"));
+}
+
+async function blobWidth(page) {
+  return page.evaluate(() => {
+    let max = 0;
+    for (const el of document.querySelectorAll('[data-inkt="player"]')) {
+      const w = el.getBoundingClientRect().width;
+      if (w > max) max = w;
+    }
+    return max;
+  });
 }
 
 const browser = await chromium.launch({ headless: true });
@@ -309,6 +322,7 @@ await assertBoard(joinPhone, "04c-player-mobile", { follow: true });
 await assertItChrome(joinPhone, "04c-player-mobile");
 await assertNoStick(joinPhone, "04c-player-mobile");
 await assertHintClearOfPlayer(joinPhone, "04c-player-mobile");
+const portraitRestBlob = await blobWidth(joinPhone);
 await spawnStick(joinPhone);
 await joinPhone.waitForTimeout(320);
 await shot(joinPhone, "14-player-mobile-stick.png");
@@ -327,7 +341,12 @@ await releasePointers(joinPhone, [21, 22]);
     const r = el.getBoundingClientRect();
     return r.width / zoom / 1600;
   }, z);
+  if (vis < 0.5) throw new Error(`16 portrait zoom-out did not widen the view (${vis})`);
   if (vis > 0.62) throw new Error(`16 portrait zoom-out shows too much arena (${vis})`);
+  const outBlob = await blobWidth(joinPhone);
+  if (outBlob > portraitRestBlob * 0.85) {
+    throw new Error(`16 critters should be smaller than rest (${outBlob} vs ${portraitRestBlob})`);
+  }
 }
 await joinPhone.evaluate(() => window.dispatchEvent(new Event("inkt-reset-gestures")));
 await joinPhone.waitForTimeout(120);
@@ -340,6 +359,7 @@ await assertBoard(joinPhone, "10-iphone-landscape", { follow: true });
 await assertItChrome(joinPhone, "10-iphone-landscape");
 await assertLandscapeChrome(joinPhone, "10-iphone-mid");
 await assertNoStick(joinPhone, "10-iphone-landscape");
+const landscapeRestBlob = await blobWidth(joinPhone);
 await spawnStick(joinPhone, 0.46, 0.52);
 await joinPhone.waitForTimeout(320);
 await shot(joinPhone, "17-player-iphone-landscape-stick.png");
@@ -358,7 +378,12 @@ await releasePointers(joinPhone, [21, 22]);
     const r = el.getBoundingClientRect();
     return r.width / zoom / 1600;
   }, z);
+  if (vis < 0.62) throw new Error(`19 landscape zoom-out did not widen the view (${vis})`);
   if (vis > 0.78) throw new Error(`19 landscape zoom-out shows too much arena (${vis})`);
+  const outBlob = await blobWidth(joinPhone);
+  if (outBlob > landscapeRestBlob * 0.9) {
+    throw new Error(`19 critters should be smaller than rest (${outBlob} vs ${landscapeRestBlob})`);
+  }
 }
 await joinPhone.evaluate(() => window.dispatchEvent(new Event("inkt-reset-gestures")));
 await joinPhone.waitForTimeout(120);
@@ -371,7 +396,7 @@ await setPhoneViewport(joinPhone, IPHONE_PORTRAIT);
 await admin.waitForTimeout(7000);
 await shot(admin, "05-shrinking-zone.png");
 let boardErr;
-for (let attempt = 0; attempt < 5; attempt++) {
+for (let attempt = 0; attempt < 10; attempt++) {
   await shot(screen, "05b-projector-zone.png");
   try {
     await assertBoard(screen, "05b-projector-zone");
@@ -379,7 +404,7 @@ for (let attempt = 0; attempt < 5; attempt++) {
     break;
   } catch (err) {
     boardErr = err;
-    await screen.waitForTimeout(500);
+    await screen.waitForTimeout(700);
   }
 }
 if (boardErr) throw boardErr;

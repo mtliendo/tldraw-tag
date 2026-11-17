@@ -41,18 +41,27 @@ function run(events: Parameters<typeof reduceGesture>[1][], limits = portrait, s
 
 describe("play gestures", () => {
   it("clamps follow zoom so the whole arena never fits", () => {
-    assert.ok(portrait.minZoom >= 700 / ARENA_H - 1e-9);
-    assert.ok(portrait.minZoom >= 390 / (ARENA_W * PORTRAIT_MAX_VISIBLE_ARENA) - 1e-9);
-    assert.ok(landscape.minZoom >= 844 / (ARENA_W * LANDSCAPE_MAX_VISIBLE_ARENA) - 1e-9);
+    assert.equal(portrait.minZoom, 390 / (ARENA_W * PORTRAIT_MAX_VISIBLE_ARENA));
+    assert.equal(landscape.minZoom, 844 / (ARENA_W * LANDSCAPE_MAX_VISIBLE_ARENA));
     assert.ok(portrait.maxZoom / portrait.base - ZOOM_IN_MAX < 1e-9);
-    assert.ok(landscape.base >= landscape.minZoom);
+    assert.ok(landscape.base > landscape.minZoom);
     assert.ok(visibleArenaWidth(390, portrait.minZoom) <= PORTRAIT_MAX_VISIBLE_ARENA + 1e-9);
     assert.ok(visibleArenaWidth(844, landscape.minZoom) <= LANDSCAPE_MAX_VISIBLE_ARENA + 1e-9);
-    assert.ok(visibleArenaWidth(844, landscape.base) <= LANDSCAPE_MAX_VISIBLE_ARENA + 1e-9);
     assert.ok(portrait.base >= MOBILE_BLOB_PX / PLAYER_TOKEN - 1e-9);
-    assert.ok(portrait.base >= 700 / 900 - 1e-9);
     assert.ok(clampZoom(0, portrait) === portrait.minZoom);
     assert.ok(clampZoom(99, portrait) === portrait.maxZoom);
+  });
+
+  it("zoom-out clamp widens the visible arena vs the default", () => {
+    const portDefault = visibleArenaWidth(390, portrait.base);
+    const portOut = visibleArenaWidth(390, portrait.minZoom);
+    assert.ok(portOut > portDefault + 0.08, `portrait ${portOut} vs ${portDefault}`);
+    assert.ok(Math.abs(portOut - PORTRAIT_MAX_VISIBLE_ARENA) < 1e-9);
+
+    const landDefault = visibleArenaWidth(844, landscape.base);
+    const landOut = visibleArenaWidth(844, landscape.minZoom);
+    assert.ok(landOut > landDefault + 0.08, `landscape ${landOut} vs ${landDefault}`);
+    assert.ok(Math.abs(landOut - LANDSCAPE_MAX_VISIBLE_ARENA) < 1e-9);
   });
 
   it("spawns a stick at the first board finger and follows it", () => {

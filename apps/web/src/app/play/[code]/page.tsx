@@ -92,6 +92,13 @@ export default function PlayPage() {
       }),
     [stage.w, stage.h, landscape, blobPx],
   );
+  const defaultZoom = useMemo(() => {
+    const coverZone = Math.max(
+      stage.w / Math.max(1, view.zone.w),
+      stage.h / Math.max(1, view.zone.h),
+    );
+    return Math.max(limits.base, coverZone);
+  }, [stage.w, stage.h, view.zone.w, view.zone.h, limits.base]);
   const [cameraZoom, setCameraZoom] = useState<number | null>(null);
   useEffect(() => {
     setCameraZoom(null);
@@ -218,6 +225,7 @@ export default function PlayPage() {
           key={landscape ? "land" : "port"}
           enabled={mobile && view.phase !== "ended"}
           limits={limits}
+          startZoom={defaultZoom}
           onZoom={(z) => setCameraZoom(z)}
           onMove={sendInput}
           avatar={me?.avatar}

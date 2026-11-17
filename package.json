@@ -1,0 +1,31 @@
+{
+  "name": "tldraw-tag",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Live audience tag on a tldraw canvas — Auth0 admin, Colyseus server, shrinking zone.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n web,server -c cyan,magenta \"npm run dev -w web\" \"npm run dev -w server\"",
+    "dev:bots": "cross-env NEXT_PUBLIC_DEFAULT_BOTS=10 npm run dev",
+    "build": "npm run build -w @inkt/shared && npm run build -w server && npm run build -w web",
+    "build:web": "npm run build -w @inkt/shared && npm run build -w web",
+    "build:server": "npm run build -w @inkt/shared && npm run build -w server",
+    "start:server": "npm run start -w server",
+    "start:web": "npm run start -w web",
+    "test": "npm run test -w @inkt/shared && npm run test -w server && npm run test -w web",
+    "e2e": "node scripts/e2e-loop.mjs && node scripts/e2e-visual.mjs",
+    "screenshots": "node scripts/screenshots.mjs",
+    "lint": "npm run lint -w web --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "playwright": "^1.65.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

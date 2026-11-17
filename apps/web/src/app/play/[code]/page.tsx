@@ -1,19 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { POWER_UPS, assignedCritterLine, playerTint, type PowerId } from "@inkt/shared";
+import { MOBILE_BLOB_PX, POWER_UPS, assignedCritterLine, playerTint, type PowerId } from "@inkt/shared";
 import { CritterThumb } from "@/components/Critter";
 import { useGameRoom } from "@/hooks/useGameRoom";
 import { useKeyboard } from "@/hooks/useKeyboard";
 import { GameCanvas } from "@/components/GameCanvas";
-import { Joystick } from "@/components/Joystick";
+import { PlayGestures } from "@/components/PlayGestures";
 import { PowerButton } from "@/components/PowerButton";
 import { TopHud } from "@/components/TopHud";
 import { Leaderboard } from "@/components/Leaderboard";
 import { Minimap } from "@/components/Minimap";
 import { isItCallout } from "@/game/callouts";
-import { LANDSCAPE_BLOB_PX, landscapeFollowPad, readPhoneLayout, type PhoneLayout } from "@/game/phoneLayout";
+import { clampZoom, zoomLimits } from "@/game/playGestures";
+import {
+  LANDSCAPE_BLOB_PX,
+  landscapeFollowPad,
+  portraitFollowPad,
+  readPhoneLayout,
+  type PhoneLayout,
+} from "@/game/phoneLayout";
 
 export default function PlayPage() {
   const params = useParams<{ code: string }>();
@@ -23,6 +30,8 @@ export default function PlayPage() {
   const [layout, setLayout] = useState<PhoneLayout>(() =>
     typeof window === "undefined" ? { mobile: false, landscape: false, width: 1440, height: 900 } : readPhoneLayout(),
   );
+  const stageRef = useRef<HTMLElement>(null);
+  const [stage, setStage] = useState({ w: layout.width, h: layout.height });
 
   useEffect(() => {
     const raw = sessionStorage.getItem(`inkt:${code}`);
@@ -37,12 +46,32 @@ export default function PlayPage() {
     window.addEventListener("orientationchange", apply);
     const mq = window.matchMedia("(orientation: landscape)");
     mq.addEventListener?.("change", apply);
+    const blockGesture = (e: Event) => e.preventDefault();
+    document.addEventListener("gesturestart", blockGesture, { passive: false });
+    document.addEventListener("gesturechange", blockGesture, { passive: false });
+    document.addEventListener("gestureend", blockGesture, { passive: false });
     return () => {
       window.removeEventListener("resize", apply);
       window.removeEventListener("orientationchange", apply);
       mq.removeEventListener?.("change", apply);
+      document.removeEventListener("gesturestart", blockGesture);
+      document.removeEventListener("gesturechange", blockGesture);
+      document.removeEventListener("gestureend", blockGesture);
     };
   }, [code, router]);
+
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const read = () => {
+      const r = el.getBoundingClientRect();
+      setStage({ w: Math.max(1, r.width), h: Math.max(1, r.height) });
+    };
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [layout.landscape, layout.mobile]);
 
   const { view, connected, error, sessionId, announce, sendInput, usePower } = useGameRoom({
     role: "player",
@@ -52,9 +81,30 @@ export default function PlayPage() {
   });
 
   const { mobile, landscape } = layout;
+  const blobPx = landscape ? LANDSCAPE_BLOB_PX : MOBILE_BLOB_PX;
+  const limits = useMemo(
+    () =>
+      zoomLimits({
+        viewportW: stage.w,
+        viewportH: stage.h,
+        landscape,
+        blobPx,
+      }),
+    [stage.w, stage.h, landscape, blobPx],
+  );
+  const [cameraZoom, setCameraZoom] = useState<number | null>(null);
+  useEffect(() => {
+    setCameraZoom(null);
+  }, [landscape]);
+
   const followPad = useMemo(
-    () => (landscape ? landscapeFollowPad(layout.width, layout.height) : undefined),
-    [landscape, layout.width, layout.height],
+    () =>
+      landscape
+        ? landscapeFollowPad(layout.width, layout.height)
+        : mobile
+          ? portraitFollowPad(layout.width, layout.height)
+          : undefined,
+    [landscape, mobile, layout.width, layout.height],
   );
 
   useKeyboard({
@@ -68,6 +118,7 @@ export default function PlayPage() {
     [view.players, sessionId],
   );
   const callout = announce && !isItCallout(announce) ? announce : "";
+  const showHint = mobile && view.phase !== "ended";
 
   if (!identity) return null;
 
@@ -114,52 +165,31 @@ export default function PlayPage() {
     </div>
   ) : null;
 
-  const dock = mobile ? (
-    <section
-      className={landscape ? "play-dock-landscape" : undefined}
-      style={
-        landscape
-          ? undefined
-          : {
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "6px 14px 10px",
-              background: "#fff",
-              borderTop: "1.5px solid var(--line)",
-              minHeight: 176,
-            }
-      }
-    >
-      <Joystick
-        onChange={sendInput}
-        compact
-        overlay={landscape}
-        avatar={me?.avatar}
-        tint={me ? playerTint(me, view.players) : 0}
-      />
+  const power = mobile ? (
+    <section className={landscape ? "play-dock-landscape" : "play-dock-portrait"}>
       <PowerButton
         powerId={me?.powerId ?? ""}
         charges={me?.charges ?? 0}
         onUse={usePower}
         compact
-        overlay={landscape}
+        overlay
       />
     </section>
   ) : null;
 
   return (
     <main
+      className="play-page"
       style={{
         height: "100dvh",
         display: "grid",
-        gridTemplateRows: mobile && !landscape ? "auto minmax(0, 1fr) auto" : "minmax(0, 1fr)",
+        gridTemplateRows: mobile && !landscape ? "auto minmax(0, 1fr)" : "minmax(0, 1fr)",
         position: "relative",
         overflow: "hidden",
       }}
     >
       {hud}
-      <section style={{ position: "relative", minHeight: 0 }}>
+      <section ref={stageRef} style={{ position: "relative", minHeight: 0 }}>
         {!mobile && (
           <div style={{ position: "absolute", top: 12, left: 12, right: 12, zIndex: 6 }}>
             <TopHud view={view} selfPower={me ? { id: me.powerId, charges: me.charges } : undefined} />
@@ -179,8 +209,20 @@ export default function PlayPage() {
           followZone={!mobile}
           followPlayer={mobile}
           followPad={followPad}
-          blobPx={landscape ? LANDSCAPE_BLOB_PX : undefined}
+          blobPx={mobile ? blobPx : undefined}
           labelScale={mobile ? (landscape ? 1.15 : 1.45) : 1}
+          landscape={landscape}
+          cameraZoom={mobile && cameraZoom != null ? clampZoom(cameraZoom, limits) : undefined}
+        />
+        <PlayGestures
+          key={landscape ? "land" : "port"}
+          enabled={mobile && view.phase !== "ended"}
+          limits={limits}
+          onZoom={(z) => setCameraZoom(z)}
+          onMove={sendInput}
+          avatar={me?.avatar}
+          tint={me ? playerTint(me, view.players) : 0}
+          hint={showHint}
         />
         {view.phase === "lobby" && (
           <div
@@ -192,6 +234,7 @@ export default function PlayPage() {
               padding: landscape ? 10 : 24,
               zIndex: 6,
               minHeight: 0,
+              pointerEvents: "none",
             }}
           >
             <div
@@ -205,6 +248,7 @@ export default function PlayPage() {
                 maxHeight: "100%",
                 overflow: "auto",
                 minHeight: 0,
+                pointerEvents: "auto",
               }}
             >
               <div className="kicker">Lobby {code}</div>
@@ -226,6 +270,11 @@ export default function PlayPage() {
               <p className="muted" style={{ margin: landscape ? "2px 0 0" : undefined }}>
                 {view.players.length} in the room{connected ? "" : " · connecting"}
               </p>
+              {mobile && (
+                <p className="muted" style={{ margin: landscape ? "4px 0 0" : "8px 0 0", fontFamily: "var(--font-display)", fontWeight: 700 }}>
+                  touch anywhere to move
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -248,8 +297,8 @@ export default function PlayPage() {
             <Leaderboard view={view} overlay compact={mobile} landscape={landscape} selfId={me?.id} />
           </div>
         )}
+        {power}
       </section>
-      {dock}
       {!mobile && (
         <div className="muted" style={{ position: "absolute", bottom: 16, left: 16, zIndex: 6 }}>
           WASD / arrows to move · space to use {me?.powerId ? POWER_UPS[me.powerId as PowerId]?.label : "a power"}

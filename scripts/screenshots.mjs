@@ -56,7 +56,8 @@ async function assertLandscapeChrome(page, label) {
     const wrap = document.querySelector(".board-wrap")?.getBoundingClientRect();
     const hud = document.querySelector(".play-hud-landscape")?.getBoundingClientRect();
     const dock = document.querySelector(".play-dock-landscape")?.getBoundingClientRect();
-    const joy = document.querySelector('[aria-label="Move"]')?.getBoundingClientRect();
+    const joy = document.querySelector('[data-inkt="joy"]');
+    const power = document.querySelector(".play-dock-landscape button")?.getBoundingClientRect();
     const panel = document.querySelector(".panel")?.getBoundingClientRect();
     const parent = document.querySelector(".panel")?.parentElement?.getBoundingClientRect();
     const you = [...document.querySelectorAll("div, span, strong, p, li")]
@@ -66,16 +67,75 @@ async function assertLandscapeChrome(page, label) {
       wrap,
       hud: Boolean(hud),
       dock: Boolean(dock),
-      joyH: joy?.height ?? 0,
+      joy: Boolean(joy),
+      power: Boolean(power),
       overlayed: Boolean(wrap && hud && dock && hud.top >= wrap.top - 2 && dock.bottom <= wrap.bottom + 4),
       overflow: Boolean(panel && parent && (panel.bottom > parent.bottom + 4 || panel.right > parent.right + 4)),
       you,
     };
   });
-  if (!report.hud || !report.dock) throw new Error(`${label}: missing landscape HUD/dock`);
+  if (!report.hud || !report.dock || !report.power) throw new Error(`${label}: missing landscape HUD/power`);
   if (!report.overlayed) throw new Error(`${label}: controls are not overlaying the board`);
   if (report.overflow) throw new Error(`${label}: card overflowed in landscape`);
   return report;
+}
+
+async function gesturePoint(page, nx = 0.5, ny = 0.42) {
+  return page.evaluate(({ nx, ny }) => {
+    const el = document.querySelector('[data-inkt="play-gestures"]');
+    if (!el) throw new Error("missing play-gestures layer");
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width * nx, y: r.top + r.height * ny, w: r.width, h: r.height };
+  }, { nx, ny });
+}
+
+async function sendPointer(page, type, id, x, y) {
+  await page.evaluate(({ type, id, x, y }) => {
+    const el = document.querySelector('[data-inkt="play-gestures"]');
+    const target = type === "down" ? el : window;
+    target.dispatchEvent(
+      new PointerEvent(`pointer${type}`, {
+        bubbles: true,
+        cancelable: true,
+        pointerId: id,
+        pointerType: "touch",
+        clientX: x,
+        clientY: y,
+        buttons: type === "up" ? 0 : 1,
+      }),
+    );
+  }, { type, id, x, y });
+}
+
+async function assertNoStick(page, label) {
+  const joy = await page.locator('[data-inkt="joy"]').count();
+  if (joy) throw new Error(`${label}: joystick should be hidden at rest`);
+}
+
+async function spawnStick(page, nx = 0.48, ny = 0.46) {
+  const p = await gesturePoint(page, nx, ny);
+  await sendPointer(page, "down", 11, p.x, p.y);
+  await sendPointer(page, "move", 11, p.x + 36, p.y - 18);
+  await page.waitForSelector('[data-inkt="joy"]', { timeout: 2000 });
+  return p;
+}
+
+async function pinchZoom(page, factor) {
+  const p = await gesturePoint(page, 0.5, 0.45);
+  const spread = 70;
+  await sendPointer(page, "down", 21, p.x - spread, p.y);
+  await sendPointer(page, "down", 22, p.x + spread, p.y);
+  await sendPointer(page, "move", 22, p.x + spread * factor, p.y);
+  await page.waitForTimeout(80);
+}
+
+async function releasePointers(page, ids) {
+  const p = await gesturePoint(page, 0.5, 0.45);
+  for (const id of ids) await sendPointer(page, "up", id, p.x, p.y);
+}
+
+async function readZoom(page) {
+  return page.evaluate(() => Number(document.querySelector("[data-inkt-zoom]")?.getAttribute("data-inkt-zoom") || "0"));
 }
 
 const browser = await chromium.launch({ headless: true });
@@ -187,6 +247,7 @@ await joinPhone.waitForTimeout(400);
 await setPhoneViewport(joinPhone, IPHONE_LANDSCAPE);
 await shot(joinPhone, "09-player-iphone-landscape-lobby.png");
 await assertLandscapeChrome(joinPhone, "09-iphone-lobby");
+await assertNoStick(joinPhone, "09-iphone-lobby");
 await setPhoneViewport(joinPhone, ANDROID_LANDSCAPE);
 await shot(joinPhone, "09b-player-android-landscape-lobby.png");
 await assertLandscapeChrome(joinPhone, "09b-android-lobby");
@@ -229,6 +290,28 @@ await joinPhone.waitForTimeout(400);
 await shot(joinPhone, "04c-player-mobile.png");
 await assertBoard(joinPhone, "04c-player-mobile", { follow: true });
 await assertItChrome(joinPhone, "04c-player-mobile");
+await assertNoStick(joinPhone, "04c-player-mobile");
+await spawnStick(joinPhone);
+await shot(joinPhone, "14-player-mobile-stick.png");
+await releasePointers(joinPhone, [11]);
+await joinPhone.waitForTimeout(220);
+await pinchZoom(joinPhone, 2.6);
+await shot(joinPhone, "15-player-mobile-zoomin.png");
+await releasePointers(joinPhone, [21, 22]);
+await pinchZoom(joinPhone, 0.12);
+await shot(joinPhone, "16-player-mobile-zoomout.png");
+await releasePointers(joinPhone, [21, 22]);
+{
+  const z = await readZoom(joinPhone);
+  const vis = await joinPhone.evaluate((zoom) => {
+    const el = document.querySelector("[data-inkt='play-gestures']");
+    const r = el.getBoundingClientRect();
+    return r.width / zoom / 1600;
+  }, z);
+  if (vis > 0.62) throw new Error(`16 portrait zoom-out shows too much arena (${vis})`);
+}
+await joinPhone.evaluate(() => window.dispatchEvent(new Event("inkt-reset-gestures")));
+await joinPhone.waitForTimeout(120);
 await admin.getByRole("button", { name: /pin tinted it/i }).click();
 await joinPhone.waitForTimeout(400);
 await setPhoneViewport(joinPhone, IPHONE_LANDSCAPE);
@@ -237,6 +320,28 @@ await shot(joinPhone, "10-player-iphone-landscape.png");
 await assertBoard(joinPhone, "10-iphone-landscape", { follow: true });
 await assertItChrome(joinPhone, "10-iphone-landscape");
 await assertLandscapeChrome(joinPhone, "10-iphone-mid");
+await assertNoStick(joinPhone, "10-iphone-landscape");
+await spawnStick(joinPhone, 0.46, 0.52);
+await shot(joinPhone, "17-player-iphone-landscape-stick.png");
+await releasePointers(joinPhone, [11]);
+await joinPhone.waitForTimeout(220);
+await pinchZoom(joinPhone, 2.6);
+await shot(joinPhone, "18-player-iphone-landscape-zoomin.png");
+await releasePointers(joinPhone, [21, 22]);
+await pinchZoom(joinPhone, 0.12);
+await shot(joinPhone, "19-player-iphone-landscape-zoomout.png");
+await releasePointers(joinPhone, [21, 22]);
+{
+  const z = await readZoom(joinPhone);
+  const vis = await joinPhone.evaluate((zoom) => {
+    const el = document.querySelector("[data-inkt='play-gestures']");
+    const r = el.getBoundingClientRect();
+    return r.width / zoom / 1600;
+  }, z);
+  if (vis > 0.78) throw new Error(`19 landscape zoom-out shows too much arena (${vis})`);
+}
+await joinPhone.evaluate(() => window.dispatchEvent(new Event("inkt-reset-gestures")));
+await joinPhone.waitForTimeout(120);
 await setPhoneViewport(joinPhone, ANDROID_LANDSCAPE);
 await shot(joinPhone, "10b-player-android-landscape.png");
 await assertBoard(joinPhone, "10b-android-landscape", { follow: true });

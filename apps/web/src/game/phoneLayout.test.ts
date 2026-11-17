@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   isPhoneLandscape,
   landscapeFollowPad,
+  portraitFollowPad,
   readPhoneLayout,
   LANDSCAPE_BLOB_PX,
 } from "./phoneLayout";
@@ -27,6 +28,9 @@ describe("phone landscape", () => {
     const pad = landscapeFollowPad(844, 390);
     assert.ok(pad.left + pad.right < 844 * 0.4);
     assert.ok(pad.top + pad.bottom < 390 * 0.35);
+    assert.ok(pad.right > pad.left);
     assert.ok(LANDSCAPE_BLOB_PX >= 32);
+    const port = portraitFollowPad(390, 844);
+    assert.ok(port.bottom > 0 && port.right > 0);
   });
 });

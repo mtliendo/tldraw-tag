@@ -111,7 +111,7 @@ export async function assertBoard(page, label, { follow = false } = {}) {
     }
     if (report.blobW < 32 || report.blobW > 96) {
       console.error(`board blob size failed (${label})`, report);
-      throw new Error(`${label}: blobs should be ~44px on mobile, got ${report.blobW.toFixed(1)}`);
+      throw new Error(`${label}: blobs should be at least 32px on mobile, got ${report.blobW.toFixed(1)}`);
     }
   }
   console.log(`board ok ${label}`, report.blobCount, "blobs", follow ? "follow-cam" : "fit-zone");

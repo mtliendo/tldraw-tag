@@ -1,4 +1,4 @@
-import { ART_INSET, PLAYER_LABEL_H, PLAYER_TOKEN } from "@inkt/shared";
+import { ART_INSET, PLAYER_LABEL_H, PLAYER_TOKEN, scaleWithPlayer } from "@inkt/shared";
 import type { ViewPlayer } from "./types";
 
 export type LabelSide = "below" | "above" | "left" | "right";
@@ -40,6 +40,7 @@ export function liveLabelScale(
   const ratio = (zone.w * zone.h) / (arena.w * arena.h);
   if (ratio < 0.55) s *= 0.86;
   if (ratio < 0.35) s *= 0.86;
+  if (ratio < 0.28) s *= 0.86;
   return s;
 }
 
@@ -81,8 +82,8 @@ export function interiorLabelSides(
 ): LabelSide[] {
   const nearTop = p.y - zone.y < ART_INSET.top + lh + 18;
   const nearBottom = zone.y + zone.h - p.y < ART_INSET.bottom + lh + 18;
-  const nearLeft = p.x - zone.x < ART_INSET.left + p.labelW * 0.5 + 14;
-  const nearRight = zone.x + zone.w - p.x < ART_INSET.right + p.labelW * 0.5 + 14;
+  const nearLeft = p.x - zone.x < PLAYER_TOKEN / 2 + p.labelW + 14;
+  const nearRight = zone.x + zone.w - p.x < PLAYER_TOKEN / 2 + p.labelW + 14;
   const forbidden = new Set<LabelSide>();
   if (nearTop) forbidden.add("above");
   if (nearBottom) forbidden.add("below");
@@ -174,7 +175,7 @@ export function layoutPlayers(
 ): LaidOutPlayer[] {
   const r = PLAYER_TOKEN / 2;
   const lh = PLAYER_LABEL_H * labelScale + 2;
-  const gaps = [10 * Math.max(0.85, labelScale), 14 * Math.max(0.85, labelScale), 20 * Math.max(0.85, labelScale), 28 * Math.max(0.85, labelScale)];
+  const gaps = [6, 10, 14, 20, 28].map((n) => n * Math.max(0.85, labelScale));
   const laid: LaidOutPlayer[] = players.map((p) => ({
     ...p,
     labelX: 0,
@@ -197,12 +198,6 @@ export function layoutPlayers(
     y: p.y - r,
     w: r * 2,
     h: r * 2,
-  });
-  const artRect = (p: LaidOutPlayer): Rect => ({
-    x: p.x - ART_INSET.left,
-    y: p.y - ART_INSET.top,
-    w: ART_INSET.left + ART_INSET.right,
-    h: ART_INSET.top + ART_INSET.bottom,
   });
 
   const youId = options?.selfId ?? selfId;
@@ -228,10 +223,13 @@ export function layoutPlayers(
       for (const slot of slots(order, labelScale)) {
         let rect = pillRect(p, slot.side, slot.ox, slot.oy, r, lh, gap);
         rect = clampRect(rect, clampTo, edgePad);
-        let score = 0;
+        let score = Math.max(0, order.indexOf(slot.side)) * 18;
         for (const q of laid) {
           score += overlapArea(rect, blobRect(q), CLEAR) * (q.id === p.id ? 8 : 5);
-          if (q.id === p.id) score += overlapArea(rect, artRect(q), 2) * 12;
+          if (q.id === p.id) {
+            const head = { x: q.x - ART_INSET.left, y: q.y - ART_INSET.top, w: ART_INSET.left + ART_INSET.right, h: ART_INSET.top - r };
+            score += overlapArea(rect, head, 2) * 12;
+          }
         }
         for (const q of taken) {
           const other: Rect = {
@@ -317,7 +315,7 @@ function separateLabels(taken: LaidOutPlayer[], blobs: LaidOutPlayer[], clampTo:
       p.labelX = rect.x + rect.w / 2 - p.x;
       p.labelY = rect.y + rect.h / 2 - p.y;
       p.labelLeader =
-        Math.hypot(p.labelX, p.labelY) > PLAYER_TOKEN / 2 + 14 ||
+        Math.hypot(p.labelX, p.labelY) > PLAYER_TOKEN / 2 + scaleWithPlayer(14) ||
         Math.abs(p.labelX) > p.labelW / 2;
     }
   }

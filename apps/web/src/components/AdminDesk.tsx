@@ -169,6 +169,13 @@ export function AdminDesk({
               >
                 Pin art
               </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => admin("pinArt", { minZone: true })}
+                disabled={view.phase !== "playing"}
+              >
+                Pin min zone
+              </button>
               {code && (
                 <a className="btn btn-ghost" href={screenUrl(code)} target="_blank" rel="noreferrer">
                   Projector

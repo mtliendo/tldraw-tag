@@ -217,7 +217,11 @@ await assertBoard(screen, "05b-projector-zone");
   });
   if (iceLeak > 0) throw new Error(`05b frozen overlay left the zone (${iceLeak})`);
 }
-await admin.getByRole("button", { name: /pin art/i }).click();
+await admin.getByRole("button", { name: /pin min zone/i }).click();
+await admin.waitForTimeout(900);
+await shot(screen, "13-projector-final-zone.png");
+await assertBoard(screen, "13-projector-final-zone");
+await admin.getByRole("button", { name: /^pin art$/i }).click();
 await admin.waitForTimeout(700);
 await shot(screen, "12c-projector-pin.png");
 await assertBoard(screen, "12c-projector-pin");

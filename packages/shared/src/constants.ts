@@ -5,20 +5,31 @@ export const TICK_DT = 1 / TICK_HZ;
 export const ARENA_W = 1600;
 export const ARENA_H = 900;
 
-export const PLAYER_RADIUS = 36;
+/** Baseline the original art insets and HUD sizes were measured at. */
+export const PLAYER_RADIUS_MEASURE = 36;
+
+/** World-space hitbox radius. Every critter metric derives from this. */
+export const PLAYER_RADIUS = 29;
+
+export function scaleWithPlayer(n: number) {
+  return Math.round((n * PLAYER_RADIUS) / PLAYER_RADIUS_MEASURE);
+}
+
 export const PLAYER_SPEED = 210;
 export const SPEEDSTER_MULTIPLIER = 2.15;
 export const DIAGONAL_LIMIT = 1;
-export const PLAYER_TOKEN = 72;
+export const PLAYER_TOKEN = PLAYER_RADIUS * 2;
 export const PLAYER_LABEL_H = 26;
 export const PLAYER_LABEL_W = 110;
 export const STROKE = 1.5;
+export const RING_PAD = scaleWithPlayer(8);
 
 export const PLAYER_SEPARATION = PLAYER_RADIUS * 2;
-export const TAG_DISTANCE = PLAYER_RADIUS * 2 + 10;
-export const MOBILE_BLOB_PX = 44;
+export const TAG_DISTANCE = PLAYER_RADIUS * 2 + scaleWithPlayer(10);
+export const MOBILE_BLOB_PX = scaleWithPlayer(44);
+export const LANDSCAPE_BLOB_PX = Math.max(32, scaleWithPlayer(36));
 export const TAG_COOLDOWN = 0.55;
-export const PICKUP_DISTANCE = 44;
+export const PICKUP_DISTANCE = scaleWithPlayer(44);
 
 export const DEFAULT_ROUND_LENGTH = 75;
 export const MIN_ROUND_LENGTH = 15;
@@ -28,7 +39,7 @@ export const ZONE_MIN_W = 320;
 export const ZONE_MIN_H = 180;
 export const ZONE_ASPECT = 16 / 9;
 export const ZONE_PACK_FACTOR = 2.5;
-export const ZONE_CELL_GAP = 12;
+export const ZONE_CELL_GAP = scaleWithPlayer(12);
 export const ZONE_SHRINK_DURATION = 1.6;
 export const ZONE_WARN_SECONDS = 2.5;
 export const ZONE_INSET = PLAYER_RADIUS + 2;
@@ -41,12 +52,13 @@ export type ArtInset = { left: number; right: number; top: number; bottom: numbe
  * <img> is 80 × (36/21) ≈ 137px, so the box extends ~68.6 left/right, 78.9 above,
  * and 58.3 below the hitbox center. Top is larger (ears, crown, IT flame). Margin
  * covers the 2px zone stroke, 2px drop-shadow, and CSS shield/self rings.
+ * Values scale with PLAYER_RADIUS from the measured 72 / 82 / 64 box.
  */
 export const ART_INSET: ArtInset = {
-  left: 72,
-  right: 72,
-  top: 82,
-  bottom: 64,
+  left: scaleWithPlayer(72),
+  right: scaleWithPlayer(72),
+  top: scaleWithPlayer(82),
+  bottom: scaleWithPlayer(64),
 };
 
 export function clampToZoneArt(
@@ -88,14 +100,16 @@ export const RECONNECT_GRACE_S = 10;
 export const POWER_SPAWN_MIN = 2.2;
 export const POWER_SPAWN_MAX = 4.8;
 export const POWER_PULSE_WARN = 1;
-export const POWER_RADIUS = 28;
-export const POWER_TOKEN = 56;
+export const POWER_RADIUS = scaleWithPlayer(28);
+export const POWER_TOKEN = POWER_RADIUS * 2;
+export const POWER_GEM = scaleWithPlayer(44);
+export const POWER_PULSE = scaleWithPlayer(64);
 export const POWER_MAX_ON_BOARD = 10;
 
 export const WALL_WIDTH = 140;
 export const WALL_THICKNESS = 26;
 export const WALL_LIFETIME = 5;
-export const WALL_PLACE_OFFSET = 64;
+export const WALL_PLACE_OFFSET = scaleWithPlayer(64);
 
 export const GHOST_DURATION = 2;
 export const SPEED_DURATION = 2;

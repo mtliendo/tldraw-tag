@@ -30,6 +30,8 @@ import {
   WALL_THICKNESS,
   WALL_WIDTH,
   ART_INSET,
+  RING_PAD,
+  ZONE_CELL_GAP,
   clampToZoneArt,
   MAX_DISPLACE_PER_SEC,
   SEPARATION_ITERS,
@@ -166,7 +168,7 @@ export class TagEngine {
       throw new Error("Room is full");
     }
     const id = opts.id ?? uid("p");
-    const guess = this.randomInZone(PLAYER_RADIUS + 8);
+    const guess = this.randomInZone(PLAYER_RADIUS + RING_PAD);
     const spawn = this.clearOfPlayers(guess.x, guess.y, PLAYER_SEPARATION);
     const avatar = this.nextAvatar();
     const player: EnginePlayer = {
@@ -312,7 +314,7 @@ export class TagEngine {
     ];
     for (const gem of gems) {
       const id = uid("pow");
-      const clear = this.clearOfPlayers(z.x + z.w * gem.fx, z.y + z.h * gem.fy, PLAYER_RADIUS + POWER_RADIUS + 8);
+      const clear = this.clearOfPlayers(z.x + z.w * gem.fx, z.y + z.h * gem.fy, PLAYER_RADIUS + POWER_RADIUS + RING_PAD);
       s.powerUps[id] = {
         id,
         kind: gem.kind,
@@ -321,7 +323,7 @@ export class TagEngine {
       };
     }
     const pulseId = uid("pow");
-    const pulseAt = this.clearOfPlayers(z.x + z.w * 0.18, z.y + z.h * 0.72, PLAYER_RADIUS + POWER_RADIUS + 8);
+    const pulseAt = this.clearOfPlayers(z.x + z.w * 0.18, z.y + z.h * 0.72, PLAYER_RADIUS + POWER_RADIUS + RING_PAD);
     s.pulses[pulseId] = {
       id: pulseId,
       kind: "decoy",
@@ -553,7 +555,7 @@ export class TagEngine {
     this.state.decoys = {};
     this.state.leaderboard = [];
     for (const p of Object.values(this.state.players)) {
-      const spawn = this.randomInZone(PLAYER_RADIUS + 8);
+      const spawn = this.randomInZone(PLAYER_RADIUS + RING_PAD);
       p.x = spawn.x;
       p.y = spawn.y;
       p.vx = 0;
@@ -692,7 +694,7 @@ export class TagEngine {
     if (!kind) return;
     if (Object.keys(s.powerUps).length + Object.keys(s.pulses).length >= POWER_MAX_ON_BOARD) return;
     const guess = this.randomInZone(PLAYER_RADIUS + POWER_RADIUS);
-    const pos = this.clearOfPlayers(guess.x, guess.y, PLAYER_RADIUS + POWER_RADIUS + 8);
+    const pos = this.clearOfPlayers(guess.x, guess.y, PLAYER_RADIUS + POWER_RADIUS + RING_PAD);
     const id = uid("pow");
     s.pulses[id] = { id, kind, x: pos.x, y: pos.y, spawnAt: s.now + POWER_PULSE_WARN };
   }
@@ -1005,8 +1007,8 @@ export class TagEngine {
     const z = this.state.zone;
     const orbit = bot.botOrbit || 0.55;
     const t = (bot.botPhase || 0) + this.state.now * (bot.botSpin || 0) * 0.15;
-    const rx = Math.max(36, (z.w / 2 - (ART_INSET.left + ART_INSET.right) / 2) * orbit);
-    const ry = Math.max(36, (z.h / 2 - (ART_INSET.top + ART_INSET.bottom) / 2) * orbit);
+    const rx = Math.max(PLAYER_RADIUS, (z.w / 2 - (ART_INSET.left + ART_INSET.right) / 2) * orbit);
+    const ry = Math.max(PLAYER_RADIUS, (z.h / 2 - (ART_INSET.top + ART_INSET.bottom) / 2) * orbit);
     const wobble = Math.sin(this.state.now * (0.7 + orbit) + (bot.botPhase || 0)) * 28;
     return {
       x: z.x + z.w / 2 + Math.cos(t) * rx + wobble * 0.4,
@@ -1036,14 +1038,14 @@ export class TagEngine {
       }
       if (nearest) {
         const away = normalize(nearest.x - bot.x, nearest.y - bot.y);
-        const standoff = Math.max(TAG_DISTANCE + 8, PLAYER_SEPARATION + 12);
+        const standoff = Math.max(TAG_DISTANCE + RING_PAD, PLAYER_SEPARATION + ZONE_CELL_GAP);
         const side = phase * 1.7;
         if (nearestD < standoff) {
           tx = bot.x - away.x * 40 + -away.y * (40 + Math.cos(side) * 50);
           ty = bot.y - away.y * 40 + away.x * (40 + Math.sin(side) * 50);
         } else {
-          tx = nearest.x - away.x * standoff + Math.cos(side) * 36;
-          ty = nearest.y - away.y * standoff + Math.sin(side) * 36;
+          tx = nearest.x - away.x * standoff + Math.cos(side) * PLAYER_RADIUS;
+          ty = nearest.y - away.y * standoff + Math.sin(side) * PLAYER_RADIUS;
         }
       }
       if (bot.powerId === "speedster" && nearestD < 420) usePower = this.rand() < 0.45;

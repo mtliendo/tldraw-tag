@@ -23,6 +23,7 @@
   --font-body: var(--font-ui), Inter, system-ui, sans-serif;
   --font-mono: var(--font-draw), "Shantell Sans", cursive;
   --you: #4465e9;
+  --inkt-ring: 6px;
   --it-card: #fff4ef;
   --input-bg: #ffffff;
   --input-ink: #1d1d1f;
@@ -486,7 +487,7 @@ h2,
 
 .shield-ring {
   position: absolute;
-  inset: -8px;
+  inset: calc(-1 * var(--inkt-ring, 6px));
   border-radius: 50%;
   border: 1.5px solid #3fa2f0;
   box-shadow: 0 0 0 3px rgba(124, 200, 255, 0.28);

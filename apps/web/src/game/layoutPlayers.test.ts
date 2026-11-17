@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { ART_INSET, minZoneSize } from "@inkt/shared";
+import { ART_INSET, PLAYER_TOKEN, minZoneSize } from "@inkt/shared";
 import { crowdLabelScale, layoutPlayers, liveLabelScale, shortPlayerName } from "./layoutPlayers";
 import type { ViewPlayer } from "./types";
 
@@ -43,7 +43,7 @@ describe("layoutPlayers", () => {
     for (let i = 0; i < 20; i++) {
       const c = i % cols;
       const r = Math.floor(i / cols);
-      players.push(player(i, 420 + c * 78, 260 + r * 78));
+      players.push(player(i, 420 + c * (PLAYER_TOKEN + 6), 260 + r * (PLAYER_TOKEN + 6)));
     }
     const laid = layoutPlayers(players, { x: 400, y: 240, w: 420, h: 340 }, crowdLabelScale(20, 1.5));
     assert.equal(laid.filter((p) => p.showLabel).length, 20);
@@ -62,13 +62,19 @@ describe("layoutPlayers", () => {
       players.push(
         player(
           i,
-          z.x + 50 + (c + 0.5) * ((z.w - 100) / cols),
-          z.y + 40 + (r + 0.5) * ((z.h - 80) / 4),
+          z.x + ART_INSET.left + (c + 0.5) * ((z.w - ART_INSET.left - ART_INSET.right) / cols),
+          z.y + ART_INSET.top + (r + 0.5) * ((z.h - ART_INSET.top - ART_INSET.bottom) / 4),
         ),
       );
     }
-    const laid = layoutPlayers(players, z, crowdLabelScale(20, 1.5));
+    const laid = layoutPlayers(players, z, liveLabelScale(20, 1.5, z));
     assert.equal(laid.filter((p) => p.showLabel).length, 20);
+    for (const p of laid) {
+      assert.ok(p.x - ART_INSET.left >= z.x - 0.5, `${p.name} art left of min zone`);
+      assert.ok(p.x + ART_INSET.right <= z.x + z.w + 0.5, `${p.name} art right of min zone`);
+      assert.ok(p.y - ART_INSET.top >= z.y - 0.5, `${p.name} art above min zone`);
+      assert.ok(p.y + ART_INSET.bottom <= z.y + z.h + 0.5, `${p.name} art below min zone`);
+    }
     for (const p of laid.filter((x) => x.showLabel)) {
       const label = {
         x: p.x + p.labelX - p.labelW / 2,
@@ -79,7 +85,7 @@ describe("layoutPlayers", () => {
       assert.ok(label.x >= z.x - 1, `${p.name} clipped left`);
       assert.ok(label.x + label.w <= z.x + z.w + 1, `${p.name} clipped right`);
     }
-    const r = 36;
+    const r = PLAYER_TOKEN / 2;
     const hits = (a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) =>
       a.x < b.x + b.w - 2 && a.x + a.w > b.x + 2 && a.y < b.y + b.h - 2 && a.y + a.h > b.y + 2;
     for (const p of laid) {

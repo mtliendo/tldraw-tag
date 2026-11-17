@@ -10,6 +10,7 @@ import { Joystick } from "@/components/Joystick";
 import { PowerButton } from "@/components/PowerButton";
 import { TopHud } from "@/components/TopHud";
 import { Leaderboard } from "@/components/Leaderboard";
+import { Minimap } from "@/components/Minimap";
 import { isItCallout } from "@/game/callouts";
 
 export default function PlayPage() {
@@ -70,13 +71,25 @@ export default function PlayPage() {
       }}
     >
       {mobile && (
-        <div style={{ padding: "8px 12px 6px", zIndex: 6 }}>
-          <TopHud view={view} selfPower={me ? { id: me.powerId, charges: me.charges } : undefined} />
-          {callout && (
-            <div className="chip" style={{ marginTop: 8, background: "#FCE19C" }}>
-              {callout}
-            </div>
-          )}
+        <div
+          style={{
+            padding: "8px 12px 6px",
+            zIndex: 6,
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <TopHud view={view} selfPower={me ? { id: me.powerId, charges: me.charges } : undefined} />
+            {callout && (
+              <div className="chip" style={{ marginTop: 8, background: "#FCE19C" }}>
+                {callout}
+              </div>
+            )}
+          </div>
+          {view.phase !== "ended" && <Minimap view={view} selfId={me?.id} compact />}
         </div>
       )}
       <section style={{ position: "relative", minHeight: 0 }}>

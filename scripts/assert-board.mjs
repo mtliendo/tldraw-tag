@@ -13,8 +13,8 @@ export async function assertBoard(page, label, { follow = false } = {}) {
       .map((el) => el.getBoundingClientRect())
       .filter((r) => r.width > 2 && r.height > 2);
     const labels = [...document.querySelectorAll('[data-inkt="label"]')]
-      .map((el) => el.getBoundingClientRect())
-      .filter((r) => r.width > 2 && r.height > 2);
+      .map((el) => ({ text: (el.textContent || "").trim(), r: el.getBoundingClientRect() }))
+      .filter((l) => l.r.width > 2 && l.r.height > 2);
     const pad = 8;
     const leaks = blobs.filter(
       (b) =>
@@ -34,10 +34,10 @@ export async function assertBoard(page, label, { follow = false } = {}) {
     const labelHits = [];
     for (let i = 0; i < labels.length; i++) {
       for (let j = i + 1; j < labels.length; j++) {
-        if (hits(labels[i], labels[j], 2)) labelHits.push("label-label");
+        if (hits(labels[i].r, labels[j].r, 2)) labelHits.push("label-label");
       }
       for (const b of blobs) {
-        if (hits(labels[i], b.r, 2)) labelHits.push(`label-${b.id}`);
+        if (hits(labels[i].r, b.r, 2)) labelHits.push(`label-${b.id}`);
       }
     }
     const wrap = document.querySelector(".board-wrap")?.getBoundingClientRect();
@@ -59,6 +59,7 @@ export async function assertBoard(page, label, { follow = false } = {}) {
       wallHits,
       labelHits,
       blobCount: blobs.length,
+      labelCount: labels.length,
       blobW,
       coversWrap,
       letterboxed: Boolean(letterboxed),
@@ -69,6 +70,10 @@ export async function assertBoard(page, label, { follow = false } = {}) {
   if (!report.ok) {
     console.error(`board assert failed (${label})`, report);
     throw new Error(`${label}: blobs left the zone, overlapped a wall, or stacked labels`);
+  }
+  if (!follow && report.blobCount >= 2 && report.blobCount <= 22 && report.labelCount < report.blobCount) {
+    console.error(`board labels missing (${label})`, report);
+    throw new Error(`${label}: expected a name on every blob (${report.labelCount}/${report.blobCount})`);
   }
   if (follow) {
     if (report.letterboxed || !report.coversWrap) {

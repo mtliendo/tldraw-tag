@@ -8,6 +8,7 @@ import { GameCanvas } from "@/components/GameCanvas";
 import { QrPanel } from "@/components/QrPanel";
 import { TopHud } from "@/components/TopHud";
 import { Leaderboard } from "@/components/Leaderboard";
+import { PlayAgain } from "@/components/PlayAgain";
 import { joinUrl, screenUrl } from "@/lib/colyseus";
 
 export function AdminDesk({
@@ -131,9 +132,13 @@ export function AdminDesk({
             <p className="muted">{connected ? "Room live" : "Connecting…"}</p>
             {code && <QrPanel value={join} code={code} />}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "16px 0" }}>
-              <button className="btn btn-it" onClick={() => admin("start")} disabled={view.phase === "playing"}>
-                Start
-              </button>
+              {view.phase === "ended" ? (
+                <PlayAgain canHost onPlayAgain={() => admin("playAgain")} />
+              ) : (
+                <button className="btn btn-it" onClick={() => admin("start")} disabled={view.phase === "playing"}>
+                  Start
+                </button>
+              )}
               {view.phase === "playing" ? (
                 <button className="btn btn-ghost" onClick={() => admin("pause")}>
                   Pause
@@ -198,12 +203,15 @@ export function AdminDesk({
                   inset: 0,
                   display: "grid",
                   placeItems: "center",
+                  justifyItems: "center",
+                  gap: 16,
                   padding: 48,
                   zIndex: 9,
                   background: "rgba(247,249,251,0.45)",
                 }}
               >
                 <Leaderboard view={view} overlay />
+                <PlayAgain canHost onPlayAgain={() => admin("playAgain")} />
               </div>
             )}
           </>

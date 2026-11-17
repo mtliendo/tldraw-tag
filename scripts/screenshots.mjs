@@ -21,7 +21,7 @@ await shot(home, "00-home.png");
 await home.close();
 
 const admin = await context.newPage();
-await admin.goto("http://localhost:3000/admin?bots=12&round=28&shrink=6", { waitUntil: "networkidle" });
+await admin.goto("http://localhost:3000/admin?bots=18&round=28&shrink=6", { waitUntil: "networkidle" });
 await admin.waitForSelector("text=Create game", { timeout: 20000 });
 await admin.waitForTimeout(400);
 await shot(admin, "01-admin-create.png");
@@ -67,6 +67,7 @@ await joinPhone.waitForTimeout(800);
 const screen = await context.newPage();
 await screen.goto(`http://localhost:3000/screen/${code}`, { waitUntil: "networkidle" });
 await screen.waitForTimeout(1500);
+await admin.waitForSelector("text=Players (20)", { timeout: 10000 });
 await shot(screen, "07-projector-lobby.png");
 
 await admin.getByRole("button", { name: /^start$/i }).click();
@@ -77,7 +78,9 @@ await admin.waitForTimeout(2400);
 await shot(admin, "04-ingame-powers.png");
 await shot(join, "04b-player.png");
 await shot(screen, "07-projector.png");
+await shot(screen, "08-projector-20.png");
 await assertBoard(screen, "07-projector");
+await assertBoard(screen, "08-projector-20");
 await joinPhone.waitForTimeout(400);
 await shot(joinPhone, "04c-player-mobile.png");
 await assertBoard(joinPhone, "04c-player-mobile", { follow: true });
@@ -90,6 +93,7 @@ await assertBoard(screen, "05b-projector-zone");
 await admin.waitForSelector("text=was IT", { timeout: 30000 });
 await admin.waitForTimeout(2400);
 await shot(admin, "06-leaderboard.png");
+await screen.waitForSelector("text=Play again", { timeout: 8000 });
 await shot(screen, "06b-projector-end.png");
 
 await phone.close();

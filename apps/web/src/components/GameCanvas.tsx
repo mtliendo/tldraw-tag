@@ -12,14 +12,12 @@ import {
   ZONE_WARN_SECONDS,
 } from "@inkt/shared";
 import { INKT_SHAPES } from "@/shapes/inkt-shapes";
-import { layoutPlayers } from "@/game/layoutPlayers";
+import { crowdLabelScale, layoutPlayers } from "@/game/layoutPlayers";
 import type { ViewState } from "@/game/types";
 import { Confetti } from "@/components/Confetti";
-import { Minimap } from "@/components/Minimap";
 
 const license = process.env.NEXT_PUBLIC_TLDRAW_LICENSE_KEY;
 const TOKEN_R = PLAYER_TOKEN / 2;
-const LABEL_CROWD = 15;
 
 export function GameCanvas({
   view,
@@ -51,6 +49,8 @@ export function GameCanvas({
   viewRef.current = view;
   const selfIdRef = useRef(selfId);
   selfIdRef.current = selfId;
+  const seenPlayers = useRef(new Set<string>());
+  const flashUntil = useRef(new Map<string, number>());
   const [hoverId, setHoverId] = useState<string | null>(null);
 
   const fit = useCallback((editor: Editor, state = viewRef.current) => {
@@ -121,8 +121,7 @@ export function GameCanvas({
 
       const warning =
         !state.shrinking && state.shrinkIn > 0 && state.shrinkIn <= ZONE_WARN_SECONDS ? 1 : 0;
-      const crowded = state.players.length > LABEL_CROWD;
-      const scale = labelScaleRef.current;
+      const scale = crowdLabelScale(state.players.length, labelScaleRef.current);
 
       make("arena", {
         type: "inkt-arena",
@@ -202,9 +201,12 @@ export function GameCanvas({
           squashUntil.current.set(p.id, now + 420);
         }
         prevIt.current.set(p.id, p.isIt);
-        const showLabel =
-          p.showLabel &&
-          (p.isIt || p.id === selfId || p.frozen || !crowded || p.id === hoverId);
+        if (!seenPlayers.current.has(p.id)) {
+          if (seenPlayers.current.size > 0) flashUntil.current.set(p.id, now + 2400);
+          seenPlayers.current.add(p.id);
+        }
+        const joinFlash = (flashUntil.current.get(p.id) ?? 0) > now;
+        const showLabel = p.showLabel || joinFlash || p.id === hoverId || p.id === selfId || p.isIt;
         playerIds.push(
           make(`player:${p.id}`, {
             type: "inkt-player",
@@ -224,10 +226,15 @@ export function GameCanvas({
               charges: p.charges,
               self: p.id === selfId,
               labelX: p.labelX,
+              labelY: p.labelY,
               labelAbove: p.labelAbove,
+              labelSide: p.labelSide,
+              labelLeader: p.labelLeader,
+              labelW: p.labelW,
               labelStack: 0,
               squash: (squashUntil.current.get(p.id) ?? 0) > now,
               showLabel,
+              joinFlash,
               playerId: p.id,
               labelScale: scale,
             },
@@ -277,7 +284,7 @@ export function GameCanvas({
     <div
       ref={wrapRef}
       className={interactive ? "board-wrap interactive" : "board-wrap"}
-      style={{ ["--inkt-label-scale" as string]: String(labelScale) }}
+      style={{ ["--inkt-label-scale" as string]: String(crowdLabelScale(view.players.length, labelScale)) }}
       onPointerOver={(e) => {
         if (!interactive) return;
         const el = (e.target as HTMLElement).closest("[data-player-id]");
@@ -308,7 +315,6 @@ export function GameCanvas({
           });
         }}
       />
-      {followPlayer && <Minimap view={view} selfId={selfId} />}
       {view.phase === "ended" && <Confetti />}
     </div>
   );

@@ -180,6 +180,34 @@ describe("TagEngine loop", () => {
     assert.ok(pub.shrinkIn > 0 && pub.shrinkIn <= 2);
   });
 
+  it("spreads fleeing bots instead of parking them on a ring", () => {
+    const engine = new TagEngine({ roundLength: 30, rand: rng(11) });
+    const ada = engine.addPlayer({ name: "Ada", avatar: "bolt" });
+    engine.spawnBots(12);
+    engine.start();
+    ada.x = 800;
+    ada.y = 450;
+    ada.isIt = true;
+    engine.state.itId = ada.id;
+    for (const p of Object.values(engine.state.players)) {
+      if (p.id === ada.id) continue;
+      p.isIt = false;
+      p.x = 800 + Math.cos(p.botPhase || 0) * 90;
+      p.y = 450 + Math.sin(p.botPhase || 0) * 90;
+    }
+    for (let i = 0; i < 40; i++) engine.tick(0.05);
+    const radii = Object.values(engine.state.players)
+      .filter((p) => p.id !== ada.id)
+      .map((p) => dist(p.x, p.y, ada.x, ada.y));
+    const mean = radii.reduce((a, b) => a + b, 0) / radii.length;
+    const variance = radii.reduce((a, b) => a + (b - mean) ** 2, 0) / radii.length;
+    assert.ok(Math.sqrt(variance) > 28, `bot radii too uniform (${Math.sqrt(variance).toFixed(1)})`);
+    const speeds = Object.values(engine.state.players)
+      .filter((p) => p.isBot)
+      .map((p) => p.botSpeed);
+    assert.ok(Math.max(...speeds) - Math.min(...speeds) > 0.15);
+  });
+
   it("lets bots chase and flee instead of sitting still after showcase", () => {
     const engine = new TagEngine({ roundLength: 30, rand: rng(19) });
     engine.addPlayer({ name: "Ada", avatar: "bolt" });
@@ -311,6 +339,28 @@ describe("TagEngine loop", () => {
     assert.ok(Math.abs(fourteen.w / fourteen.h - 16 / 9) < 0.02);
     assert.ok(thirty.w <= ARENA_W);
     assert.ok(thirty.h <= ARENA_H);
+  });
+
+  it("plays again from the end screen with the same room and players", () => {
+    const engine = new TagEngine({
+      code: "AGAIN",
+      roundLength: 8,
+      shrinkInterval: 3,
+      rand: rng(4),
+    });
+    engine.addPlayer({ name: "Ada", avatar: "bolt" });
+    engine.spawnBots(6);
+    engine.start();
+    const code = engine.state.code;
+    const ids = Object.keys(engine.state.players).sort();
+    for (let i = 0; i < 400 && engine.state.phase !== "ended"; i++) engine.tick(0.05);
+    assert.equal(engine.state.phase, "ended");
+    engine.start();
+    assert.equal(engine.state.phase, "playing");
+    assert.equal(engine.state.code, code);
+    assert.deepEqual(Object.keys(engine.state.players).sort(), ids);
+    assert.equal(engine.state.leaderboard.length, 0);
+    assert.ok(engine.state.zone.w >= ARENA_W - 1);
   });
 
   it("passes IT to the nearest remaining player when IT leaves", () => {

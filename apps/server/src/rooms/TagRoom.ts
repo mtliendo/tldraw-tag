@@ -145,6 +145,12 @@ export class TagRoom extends Room<{ state: GameState }> {
       case "start":
         this.engine.start();
         break;
+      case "playAgain":
+        if (this.engine.state.phase !== "ended") {
+          throw new Error("Round is still going");
+        }
+        this.engine.start();
+        break;
       case "pause":
         this.engine.pause();
         break;

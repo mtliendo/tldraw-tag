@@ -66,6 +66,24 @@ console.log(
 );
 if (state.phase !== "ended") throw new Error("expected ended");
 if (state.zoneW >= 1600) throw new Error("zone did not shrink");
+const n = state.players.size;
+const code = room.roomId;
+room.send("admin", { action: "playAgain" });
+await new Promise((resolve, reject) => {
+  const t = setTimeout(() => reject(new Error("playAgain did not start")), 4000);
+  const check = () => {
+    if (room.state.phase === "playing") {
+      clearTimeout(t);
+      resolve(null);
+    }
+  };
+  room.onStateChange(check);
+  check();
+});
+if (room.roomId !== code) throw new Error("playAgain changed the room code");
+if (room.state.players.size !== n) throw new Error("playAgain dropped players");
+if (room.state.zoneW < 1500) throw new Error("playAgain did not restore the arena");
+console.log("playAgain", room.roomId, "players", room.state.players.size, "phase", room.state.phase);
 await room.leave();
 await player.leave();
 console.log("ok");

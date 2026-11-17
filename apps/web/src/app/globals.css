@@ -37,6 +37,16 @@
   box-sizing: border-box;
 }
 
+html {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}
+
 html,
 body {
   margin: 0;
@@ -58,12 +68,43 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
+  color: var(--ink);
+  caret-color: var(--ink);
 }
 
 button {
   cursor: pointer;
+  background-color: var(--card);
+  color: var(--ink);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select,
+textarea {
+  background-color: var(--card);
+  color: var(--ink);
+  caret-color: var(--ink);
+  border: var(--stroke) solid var(--ink);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+input[type="range"] {
+  accent-color: var(--ink);
+  background: transparent;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--ink);
 }
 
 .tldraw {
@@ -213,8 +254,9 @@ h2,
   padding: 12px 14px;
   border-radius: 12px 18px 10px 16px;
   border: var(--stroke) solid var(--ink);
-  background: #fff;
+  background-color: var(--card);
   color: var(--ink);
+  caret-color: var(--ink);
   font-size: 18px;
 }
 
@@ -310,16 +352,40 @@ h2,
 .player-label {
   font-family: var(--font-display);
   letter-spacing: 0;
-  font-size: calc(12px * var(--inkt-label-scale, 1));
-  padding: calc(1px * var(--inkt-label-scale, 1)) calc(8px * var(--inkt-label-scale, 1));
+  font-size: calc(11px * var(--inkt-label-scale, 1));
+  padding: calc(1px * var(--inkt-label-scale, 1)) calc(6px * var(--inkt-label-scale, 1));
   border-radius: 999px;
   border: var(--stroke) solid #1d1d1d;
   background: rgba(255, 255, 255, 0.94);
-  max-width: calc(92px * var(--inkt-label-scale, 1));
+  max-width: calc(110px * var(--inkt-label-scale, 1));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transform: translateX(-50%);
+  box-sizing: border-box;
+  line-height: 1.25;
+}
+
+.player-label.you-label {
+  background: #e8f3fc;
+  border-color: #4ba1f1;
+}
+
+.player-label.join-flash {
+  animation: join-pop 1.8s ease;
+}
+
+@keyframes join-pop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.7);
+    background: #fce19c;
+  }
+  35% {
+    transform: translate(-50%, -50%) scale(1.08);
+    background: #fce19c;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 .confetti-bit {

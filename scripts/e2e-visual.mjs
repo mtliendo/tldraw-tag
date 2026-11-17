@@ -8,7 +8,7 @@ const context = await browser.newContext({
   colorScheme: "light",
 });
 const admin = await context.newPage();
-await admin.goto("http://localhost:3000/admin?bots=10&round=22&shrink=6", { waitUntil: "networkidle" });
+await admin.goto("http://localhost:3000/admin?bots=19&round=22&shrink=6", { waitUntil: "networkidle" });
 await admin.waitForSelector("text=Create game", { timeout: 20000 });
 await admin.getByRole("button", { name: /create game/i }).click();
 await admin.waitForSelector("text=Room live", { timeout: 15000 });

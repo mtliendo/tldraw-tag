@@ -189,6 +189,10 @@ export class TagEngine {
       thinkAt: 0,
       wanderX: spawn.x,
       wanderY: spawn.y,
+      botOrbit: 0.28 + this.rand() * 0.62,
+      botPhase: this.rand() * Math.PI * 2,
+      botSpeed: 0.56 + this.rand() * 0.5,
+      botSpin: (this.rand() - 0.5) * 1.1,
     };
     this.state.players[id] = player;
     this.inputs.set(id, { x: 0, y: 0, usePower: false });
@@ -896,16 +900,15 @@ export class TagEngine {
   }
 
   private botHome(bot: EnginePlayer) {
-    const bots = Object.values(this.state.players).filter((p) => p.isBot);
-    const i = Math.max(0, bots.findIndex((p) => p.id === bot.id));
-    const n = Math.max(1, bots.length);
     const z = this.state.zone;
-    const t = ((i + 0.37) / n) * Math.PI * 2;
-    const rx = Math.max(40, (z.w / 2 - ZONE_INSET) * 0.62);
-    const ry = Math.max(40, (z.h / 2 - ZONE_INSET) * 0.62);
+    const orbit = bot.botOrbit || 0.55;
+    const t = (bot.botPhase || 0) + this.state.now * (bot.botSpin || 0) * 0.15;
+    const rx = Math.max(36, (z.w / 2 - ZONE_INSET) * orbit);
+    const ry = Math.max(36, (z.h / 2 - ZONE_INSET) * orbit);
+    const wobble = Math.sin(this.state.now * (0.7 + orbit) + (bot.botPhase || 0)) * 28;
     return {
-      x: z.x + z.w / 2 + Math.cos(t) * rx,
-      y: z.y + z.h / 2 + Math.sin(t) * ry,
+      x: z.x + z.w / 2 + Math.cos(t) * rx + wobble * 0.4,
+      y: z.y + z.h / 2 + Math.sin(t) * ry + wobble * 0.25,
     };
   }
 
@@ -915,6 +918,8 @@ export class TagEngine {
     let ty = bot.y;
     let usePower = false;
     const home = this.botHome(bot);
+    const speed = bot.botSpeed || 0.85;
+    const phase = bot.botPhase || 0;
 
     if (bot.isIt) {
       let nearest: EnginePlayer | null = null;
@@ -930,12 +935,13 @@ export class TagEngine {
       if (nearest) {
         const away = normalize(nearest.x - bot.x, nearest.y - bot.y);
         const standoff = Math.max(TAG_DISTANCE + 8, PLAYER_SEPARATION + 12);
+        const side = phase * 1.7;
         if (nearestD < standoff) {
-          tx = bot.x - away.x * 40 + -away.y * 70;
-          ty = bot.y - away.y * 40 + away.x * 70;
+          tx = bot.x - away.x * 40 + -away.y * (40 + Math.cos(side) * 50);
+          ty = bot.y - away.y * 40 + away.x * (40 + Math.sin(side) * 50);
         } else {
-          tx = nearest.x - away.x * standoff;
-          ty = nearest.y - away.y * standoff;
+          tx = nearest.x - away.x * standoff + Math.cos(side) * 36;
+          ty = nearest.y - away.y * standoff + Math.sin(side) * 36;
         }
       }
       if (bot.powerId === "speedster" && nearestD < 420) usePower = this.rand() < 0.45;
@@ -944,8 +950,12 @@ export class TagEngine {
       const dIt = dist(bot.x, bot.y, it.x, it.y);
       if (dIt < 280) {
         const away = normalize(bot.x - it.x, bot.y - it.y);
-        tx = home.x * 0.55 + (bot.x + away.x * 220) * 0.45;
-        ty = home.y * 0.55 + (bot.y + away.y * 220) * 0.45;
+        const ang = phase + s.now * (bot.botSpin || 0);
+        const rad = 70 + (bot.botOrbit || 0.5) * 260;
+        const scatterX = it.x + Math.cos(ang) * rad;
+        const scatterY = it.y + Math.sin(ang) * rad;
+        tx = scatterX * 0.42 + home.x * 0.28 + (bot.x + away.x * 180) * 0.3;
+        ty = scatterY * 0.42 + home.y * 0.28 + (bot.y + away.y * 180) * 0.3;
         if (bot.powerId === "ghost" && dIt < 140) usePower = true;
         if (bot.powerId === "speedster" && dIt < 200) usePower = this.rand() < 0.5;
         if (bot.powerId === "shield" && dIt < 90) usePower = true;
@@ -971,11 +981,14 @@ export class TagEngine {
       ty = home.y;
     }
 
+    tx += Math.sin(s.now * (0.55 + speed) + phase) * 54;
+    ty += Math.cos(s.now * (0.4 + (bot.botOrbit || 0.5)) + phase) * 48;
+
     const dir = normalize(tx - bot.x, ty - bot.y);
-    const jitter = 0.08;
+    const jitter = 0.26;
     return {
-      x: clamp(dir.x + (this.rand() - 0.5) * jitter, -1, 1),
-      y: clamp(dir.y + (this.rand() - 0.5) * jitter, -1, 1),
+      x: clamp((dir.x + (this.rand() - 0.5) * jitter) * speed, -1, 1),
+      y: clamp((dir.y + (this.rand() - 0.5) * jitter) * speed, -1, 1),
       usePower,
     };
   }

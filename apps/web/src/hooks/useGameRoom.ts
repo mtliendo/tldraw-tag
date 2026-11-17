@@ -46,6 +46,7 @@ export function useGameRoom(opts: {
   useEffect(() => {
     if (!opts.enabled) return;
     if (opts.create && !opts.accessToken) return;
+    if (opts.role === "admin" && !opts.accessToken) return;
     if (!opts.create && !opts.code) return;
     if (opts.role === "player" && !opts.name) return;
 

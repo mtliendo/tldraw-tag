@@ -196,3 +196,5 @@ Do not enable `DEV_BYPASS_AUTH` on Railway.
 ![Leaderboard](docs/screenshots/06-leaderboard.png)
 
 ![Projector view](docs/screenshots/07-projector.png)
+
+![20-player projector](docs/screenshots/08-projector-20.png)

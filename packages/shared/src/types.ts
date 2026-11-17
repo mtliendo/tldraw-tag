@@ -53,6 +53,10 @@ export type EnginePlayer = {
   thinkAt: number;
   wanderX: number;
   wanderY: number;
+  botOrbit: number;
+  botPhase: number;
+  botSpeed: number;
+  botSpin: number;
 };
 
 export type EnginePowerUp = {

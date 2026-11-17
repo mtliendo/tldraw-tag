@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { POWER_UPS, avatarById, formatTime, phaseStatus, type PowerId } from "@inkt/shared";
 import { useGameRoom } from "@/hooks/useGameRoom";
 import { GameCanvas } from "@/components/GameCanvas";
 import { QrPanel } from "@/components/QrPanel";
 import { Leaderboard } from "@/components/Leaderboard";
+import { PlayAgain } from "@/components/PlayAgain";
 import { AvatarGlyph } from "@/components/AvatarGlyph";
 import { joinUrl } from "@/lib/colyseus";
 import { isItCallout } from "@/game/callouts";
@@ -13,16 +15,55 @@ import { isItCallout } from "@/game/callouts";
 export default function ScreenPage() {
   const params = useParams<{ code: string }>();
   const code = String(params.code || "").toUpperCase();
-  const { view, error, announce } = useGameRoom({
-    role: "spectator",
+  const [adminToken, setAdminToken] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/admin/token")
+      .then(async (res) => {
+        if (!live) return;
+        if (!res.ok) {
+          setAdminToken(null);
+          return;
+        }
+        const body = await res.json();
+        setAdminToken(typeof body.token === "string" ? body.token : null);
+      })
+      .catch(() => {
+        if (live) setAdminToken(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const isHost = Boolean(adminToken);
+  const { view, error, announce, admin } = useGameRoom({
+    role: isHost ? "admin" : "spectator",
     code,
-    enabled: Boolean(code),
+    accessToken: adminToken,
+    enabled: Boolean(code) && adminToken !== undefined,
   });
   const it = view.players.find((p) => p.isIt);
   const itAvatar = avatarById(it?.avatar);
   const itPower = it?.powerId ? POWER_UPS[it.powerId as PowerId] : null;
   const ended = view.phase === "ended";
   const callout = announce && !isItCallout(announce) ? announce : "";
+  const seenJoins = useRef(new Set<string>());
+  const [joinFlash, setJoinFlash] = useState<string | null>(null);
+  const playerIds = view.players.map((p) => p.id).join(",");
+
+  useEffect(() => {
+    const fresh = view.players.filter((p) => !seenJoins.current.has(p.id));
+    if (seenJoins.current.size === 0) {
+      for (const p of view.players) seenJoins.current.add(p.id);
+      return;
+    }
+    if (fresh.length === 0) return;
+    for (const p of fresh) seenJoins.current.add(p.id);
+    const names = fresh.map((p) => p.name).join(", ");
+    setJoinFlash(`${names} joined`);
+    const t = window.setTimeout(() => setJoinFlash(null), 2200);
+    return () => window.clearTimeout(t);
+  }, [playerIds]);
 
   return (
     <main
@@ -121,6 +162,11 @@ export default function ScreenPage() {
                 {callout}
               </div>
             )}
+            {joinFlash && (
+              <div className="chip" style={{ marginTop: 10, fontSize: 20, background: "#FCE19C" }}>
+                {joinFlash}
+              </div>
+            )}
           </div>
         )}
 
@@ -131,12 +177,15 @@ export default function ScreenPage() {
               inset: 0,
               display: "grid",
               placeItems: "center",
-              padding: "72px 48px",
+              justifyItems: "center",
+              gap: 16,
+              padding: "28px 24px",
               zIndex: 9,
               background: "rgba(247,249,251,0.55)",
             }}
           >
             <Leaderboard view={view} overlay />
+            <PlayAgain canHost={isHost} onPlayAgain={() => admin("playAgain")} />
           </div>
         )}
         {error && (
